@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Compte Boost</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: barre d'onglets admin, tuiles de synthèse, tableaux de contrôle ; espace de saisie en cartes par page ; une colonne sur téléphone */
+:root{
+  --bg:#f2f4f1; --surface:#ffffff; --ink:#18201b; --muted:#5d6961; --line:#dce2db; --soft:#e8eee9;
+  --accent:#1d6b49; --accent-ink:#ffffff;
+  --up:#1a7a45; --down:#c0392b; --flat:#6b746e; --upbg:#e3f3e8; --downbg:#fbe7e4; --flatbg:#eceeed;
+  --s1:#2f5fb3; --s2:#b9761d;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111513; --surface:#191f1c; --ink:#e6ebe7; --muted:#97a39b; --line:#2a322d; --soft:#212924;
+  --accent:#4cc28c; --accent-ink:#0c1510;
+  --up:#4fcb85; --down:#f08070; --flat:#9aa39d; --upbg:#173325; --downbg:#3a1d19; --flatbg:#252b28;
+  --s1:#5585d6; --s2:#b07a2c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111513; --surface:#191f1c; --ink:#e6ebe7; --muted:#97a39b; --line:#2a322d; --soft:#212924;
+  --accent:#4cc28c; --accent-ink:#0c1510;
+  --up:#4fcb85; --down:#f08070; --flat:#9aa39d; --upbg:#173325; --downbg:#3a1d19; --flatbg:#252b28;
+  --s1:#5585d6; --s2:#b07a2c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);padding-inline:16px;padding-block:18px 48px}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:18px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:1.55rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.1rem;font-weight:700}
+h3{font-size:1rem;font-weight:600}
+.label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between}
+.clock{font-family:var(--mono);font-size:.95rem;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;white-space:nowrap}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line)}
+nav.tabs button{border:0;background:none;padding:10px 14px;font:600 .92rem var(--body);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;border-radius:0}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.banner{background:var(--soft);border-radius:10px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tile{background:var(--surface);padding:14px 16px;display:grid;gap:2px;align-content:start;min-width:0}
+.tile .v{font-family:var(--display);font-size:1.75rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.tile .s{font-size:.85rem;min-height:1.3em}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:14px;min-width:0}
+.ph{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.tablebox{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--soft)}
+.d{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-weight:700;font-variant-numeric:tabular-nums;border-radius:6px;padding:1px 7px;white-space:nowrap}
+.d.up{color:var(--up);background:var(--upbg)} .d.down{color:var(--down);background:var(--downbg)} .d.flat{color:var(--flat);background:var(--flatbg)}
+.d.plain{background:none;padding:0}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--upbg);color:var(--up)} .chip.todo{background:var(--downbg);color:var(--down)} .chip.none{background:var(--flatbg);color:var(--flat)}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.1fr);gap:10px}
+.day{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:4px;min-width:0}
+.day .big{font-family:var(--display);font-size:1.9rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.day.total{background:var(--soft);border-color:transparent}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=number]{font-family:var(--mono)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;font-weight:600;border-radius:8px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.small{padding:4px 10px;font-size:.85rem}
+button.link{border:0;background:none;padding:4px 6px;color:var(--muted);font-weight:500}
+button:disabled{opacity:.5;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 12px;background:var(--surface);color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .h{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;font-weight:600;padding:4px 0}
+.cal button{min-height:58px;padding:6px;text-align:left;display:grid;align-content:space-between;gap:2px;font-weight:500;border-radius:8px;min-width:0}
+.cal button.has{background:var(--soft)}
+.cal button.sel{outline:2px solid var(--accent);outline-offset:-2px}
+.cal button.out{opacity:.35}
+.cal .cv{font-family:var(--mono);font-size:.75rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:14px;font-size:.82rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.pagecard{display:grid;gap:12px}
+.boost{display:grid;grid-template-columns:minmax(0,1fr) 130px 110px auto;gap:8px;align-items:center}
+.boost.del input,.boost.del select{opacity:.55}
+.sumrow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.sumrow>div{background:var(--soft);border-radius:10px;padding:8px 10px;display:grid;gap:2px;min-width:0}
+.sumrow .v{font-family:var(--mono);font-weight:700;font-size:1.15rem}
+.compare{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:1.05rem}
+.compare .vs{font-family:var(--display);font-size:1.5rem;font-weight:700}
+.msg{font-size:.88rem;min-height:1.3em}
+.msg.ok{color:var(--up)} .msg.err{color:var(--down)}
+.empty{color:var(--muted);text-align:center;padding:26px 8px;white-space:normal}
+.copy{display:flex;gap:8px;flex-wrap:wrap}
+.copy input{flex:1 1 260px;font-family:var(--mono);font-size:.82rem}
+[hidden]{display:none!important}
+@media (max-width:980px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
+@media (max-width:640px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .three{grid-template-columns:repeat(3,minmax(0,1fr))}.day.total{grid-column:1/-1}
+  .day .big{font-size:1.4rem}
+  .boost{grid-template-columns:1fr 1fr}.boost .bn{grid-column:1/-1}
+  .sumrow{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div><div class="label" id="roleLabel">Chargement</div><h1>Compte Boost</h1></div>
+    <div class="clock" id="clock" aria-live="off"></div>
+  </header>
+  <div class="banner" id="demoBanner" hidden><span id="demoText">Données d'exemple affichées. Rien n'est enregistré.</span><button class="small" id="demoOff" type="button">Quitter les exemples</button></div>
+  <div class="banner" id="noDb" hidden><span>Enregistrement indisponible dans cet affichage. Ouvre la page depuis claude.ai en étant connecté.</span></div>
+  <nav class="tabs" id="tabs" role="tablist" hidden></nav>
+  <main id="view"></main>
+</div>
+
+<script>
+(function(){
+"use strict";
+var JOURS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+var JC=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+var STATUTS={actif:'Actif',pause:'En pause',supprime:'Supprimé'};
+var S={db:null,user:null,me:null,owner:false,pages:{},membres:{},entries:{},valid:{},names:{},
+  demo:false,tab:'dash',gran:'semaine',page:'all',calMonth:null,selDate:null,histGran:'jour',threeRef:null,drafts:{},msgs:{},subs:{}};
+var $=function(id){return document.getElementById(id)};
+function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function pad(n){return (n<10?'0':'')+n}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function parse(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return ymd(d)}
+function today(){return ymd(new Date())}
+function nf(n){return n==null||isNaN(n)?'—':Math.round(n).toLocaleString('fr-FR')}
+function isoWeek(s){var d=parse(s);var t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));var day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);var y=t.getUTCFullYear();var w=Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7);return{y:y,w:w}}
+function weekKey(s){var w=isoWeek(s);return w.y+'-S'+pad(w.w)}
+function monday(s){var d=parse(s);var k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return ymd(d)}
+function pkey(s,g){return g==='jour'?s:g==='semaine'?weekKey(s):g==='mois'?s.slice(0,7):s.slice(0,4)}
+function pstep(s,g,n){var d=parse(s);if(g==='jour')d.setDate(d.getDate()+n);else if(g==='semaine')d.setDate(d.getDate()+7*n);else if(g==='mois'){d.setDate(1);d.setMonth(d.getMonth()+n)}else{d.setMonth(0,1);d.setFullYear(d.getFullYear()+n)}return ymd(d)}
+function plabel(k,g,ref){
+  if(g==='jour'){var d=parse(k);return cap(JOURS[d.getDay()])+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)}
+  if(g==='semaine'){var m=monday(ref);var e=addDays(m,6);return 'Semaine '+(+k.split('-S')[1])+' · '+m.slice(8)+'/'+m.slice(5,7)+'–'+e.slice(8)+'/'+e.slice(5,7)}
+  if(g==='mois'){return cap(MOIS[+k.slice(5)-1])+' '+k.slice(0,4)}
+  return k;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function dayName(s){return cap(JOURS[parse(s).getDay()])}
+function short(s){return s.slice(8)+'/'+s.slice(5,7)}
+/* Flèche + écart : ↑ vert, ↓ rouge, → neutre */
+function delta(d,opts){
+  opts=opts||{};
+  if(d==null||isNaN(d))return '<span class="muted">—</span>';
+  var c=d>0?'up':d<0?'down':'flat', a=d>0?'↑':d<0?'↓':'→';
+  var t=a+(opts.noNum?'':' '+(d>0?'+':d<0?'−':'')+nf(Math.abs(d)));
+  if(opts.pct!=null&&isFinite(opts.pct)&&d!==0)t+=' <span style="font-weight:500">('+(opts.pct>0?'+':'−')+Math.abs(opts.pct).toFixed(1).replace('.',',')+' %)</span>';
+  return '<span class="d '+c+(opts.plain?' plain':'')+'">'+t+'</span>';
+}
+function pct(a,b){return b?((a-b)/b)*100:null}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+
+/* ---------- Données dérivées ---------- */
+function allEntries(){var out=[];Object.keys(S.entries).forEach(function(u){out=out.concat(S.entries[u]||[])});return out}
+function totaux(boosts,reels){
+  var t={actifs:0,pause:0,supprimes:0,total:0,messagesBoosts:0};
+  (boosts||[]).forEach(function(b){t.total++;var m=+b.messages||0;if(b.statut==='actif'){t.actifs++;t.messagesBoosts+=m}else if(b.statut==='pause')t.pause++;else t.supprimes++});
+  t.reels=reels==null||reels===''?null:+reels; t.ecart=t.reels==null?null:t.reels-t.messagesBoosts; return t;
+}
+/* Valeur du jour d'une page = dernière saisie de ce jour */
+function dayMap(){
+  var m={};
+  allEntries().forEach(function(e){
+    if(!S.pages[e.pageId])return;
+    var p=m[e.pageId]||(m[e.pageId]={});
+    if(!p[e.date]||p[e.date].horodatage<e.horodatage)p[e.date]=e;
+  });
+  return m;
+}
+function pageIds(filter){return Object.keys(S.pages).filter(function(id){return !S.pages[id].archivee&&(filter==null||filter==='all'||filter===id)}).sort(function(a,b){return S.pages[a].nom.localeCompare(S.pages[b].nom)})}
+function latestState(pid,dm,upTo){
+  var days=Object.keys(dm[pid]||{}).filter(function(d){return !upTo||d<=upTo}).sort();
+  return days.length?dm[pid][days[days.length-1]]:null;
+}
+function dayTotal(dm,date,filter){
+  var r={reels:0,boosts:0,actifs:0,n:0};
+  pageIds(filter).forEach(function(pid){var e=(dm[pid]||{})[date];if(e){r.n++;r.reels+=e.totaux.reels||0;r.boosts+=e.totaux.messagesBoosts;r.actifs+=e.totaux.actifs}});
+  return r.n?r:null;
+}
+function aggregate(dm,k,g,filter){
+  var r={reels:0,boosts:0,nbBoosts:0,days:{},n:0};
+  pageIds(filter).forEach(function(pid){
+    var last=null;
+    Object.keys(dm[pid]||{}).forEach(function(d){
+      if(pkey(d,g)!==k)return; var e=dm[pid][d]; r.n++;
+      r.reels+=e.totaux.reels||0; r.boosts+=e.totaux.messagesBoosts;
+      r.days[d]=(r.days[d]||0)+e.totaux.actifs;
+      if(!last||d>last.date)last=e;
+    });
+    if(last)r.nbBoosts+=last.totaux.total;
+  });
+  var dk=Object.keys(r.days); r.moyActifs=dk.length?dk.reduce(function(s,d){return s+r.days[d]},0)/dk.length:null;
+  r.ecart=r.reels-r.boosts; return r.n?r:null;
+}
+function memberName(u){
+  if(!u)return '—';
+  var m=S.membres[u]||{};
+  return m.libelle||S.names[u]||m.nomSaisi||(u===S.me?'Moi':'Employé');
+}
+function weekStatus(pid,wk){var v=S.valid[wk+'_'+pid];return v&&v.statut==='valide'?'valide':'averifier'}
+function statusChip(st,hasData){
+  if(!hasData)return '<span class="chip none">Aucune saisie</span>';
+  return st==='valide'?'<span class="chip ok">✓ Validé</span>':'<span class="chip todo">● À vérifier</span>';
+}
+
+/* ---------- Rendu ---------- */
+function setTabs(){
+  var tabs=[['dash','Tableau de bord'],['saisie','Saisie'],['cal','Calendrier'],['recap','Récapitulatifs'],['valid','Validations'],['equipe','Pages et équipe']];
+  var nav=$('tabs'); nav.hidden=!S.owner;
+  if(!S.owner)return;
+  nav.innerHTML=tabs.map(function(t){return '<button role="tab" type="button" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+t[1]+'</button>'}).join('');
+}
+function render(){
+  if(!S.ready){$('view').innerHTML='<section class="panel"><p class="empty">Chargement…</p></section>';return}
+  $('roleLabel').textContent=S.owner?'Administration':'Espace de saisie';
+  $('demoBanner').hidden=!S.demo;
+  setTabs();
+  var v=$('view');
+  if(!S.owner){v.innerHTML=viewSaisie(true);return}
+  var f={dash:viewDash,saisie:function(){return viewSaisie(false)},cal:viewCal,recap:viewRecap,valid:viewValid,equipe:viewEquipe}[S.tab];
+  v.innerHTML=f();
+  if(S.tab==='equipe')resolveNames();
+}
+function pageSelect(id,val,withAll){
+  return '<select id="'+id+'" aria-label="Page">'+(withAll?'<option value="all">Toutes les pages</option>':'')+pageIds().map(function(p){return '<option value="'+p+'"'+(val===p?' selected':'')+'>'+esc(S.pages[p].nom)+'</option>'}).join('')+'</select>';
+}
+
+function viewDash(){
+  var dm=dayMap(), t=today(), y=addDays(t,-1), y2=addDays(t,-2), ids=pageIds(), wk=weekKey(t);
+  if(!ids.length)return emptyStart();
+  var curA=0,curB=0,curR=0,hasR=false,best=null,worst=null;
+  var rows=ids.map(function(pid){
+    var p=S.pages[pid], st=latestState(pid,dm), d=dm[pid]||{};
+    var e0=d[t],e1=d[y],e2=d[y2];
+    var v0=e0?e0.totaux.reels:null,v1=e1?e1.totaux.reels:null,v2=e2?e2.totaux.reels:null;
+    if(st){curA+=st.totaux.actifs}
+    if(e0){curB+=e0.totaux.messagesBoosts;if(v0!=null){curR+=v0;hasR=true}}
+    var ev=v0!=null&&v1!=null?v0-v1:null;
+    if(ev!=null){if(!best||ev>best.v)best={pid:pid,v:ev};if(!worst||ev<worst.v)worst={pid:pid,v:ev}}
+    var ecart=e0?e0.totaux.ecart:null;
+    var hasWeek=Object.keys(d).some(function(x){return weekKey(x)===wk});
+    return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(p.nom)+'</strong></td><td>'+esc(memberName(p.responsable))+'</td>'+
+      '<td class="n">'+(st?st.totaux.actifs:'—')+'<span class="muted" style="font-weight:400"> /'+(st?st.totaux.total:'—')+'</span></td>'+
+      '<td class="n">'+(e0?nf(e0.totaux.messagesBoosts):'—')+'</td><td class="n">'+nf(v0)+'</td><td>'+delta(ecart)+'</td>'+
+      '<td class="n muted">'+nf(v2)+'</td><td class="n muted">'+nf(v1)+'</td><td class="n"><strong>'+nf(v0)+'</strong></td>'+
+      '<td>'+delta(ev,{pct:pct(v0,v1)})+'</td><td>'+statusChip(weekStatus(pid,wk),hasWeek)+'</td></tr>';
+  }).join('');
+  var mon=monday(t), el=Math.round((parse(t)-parse(mon))/864e5), cw=sumRange(dm,mon,t), pw=sumRange(dm,addDays(mon,-7),addDays(t,-7));
+  var wd=cw&&pw?cw.reels-pw.reels:null;
+  var tiles=
+    tile('Boosts actifs',curA,'<span class="muted">sur '+ids.length+' page'+(ids.length>1?'s':'')+'</span>')+
+    tile('Messages boosts',e0n(curB),'<span class="muted">aujourd\'hui</span>')+
+    tile('Messages réels',hasR?nf(curR):'—','<span class="muted">aujourd\'hui</span>')+
+    tile('Écart',hasR?delta(curR-curB,{plain:true}):'—','<span class="muted">réels − boosts</span>')+
+    tile('Semaine en cours',cw?nf(cw.reels):'—',delta(wd,{pct:cw&&pw?pct(cw.reels,pw.reels):null})+' <span class="muted" style="font-size:.75rem">vs '+(el?'lun.–'+JC[el].toLowerCase()+'.':'lundi')+' préc.</span>')+
+    tile('Pages',best?'<span style="font-size:1rem">'+esc(S.pages[best.pid].nom)+' '+delta(best.v,{plain:true})+'</span>':'—',worst&&worst.v<0?'À vérifier : '+esc(S.pages[worst.pid].nom)+' '+delta(worst.v,{plain:true}):'<span class="muted">meilleure progression</span>');
+  return '<div style="display:grid;gap:18px">'+
+    '<div class="tiles">'+tiles+'</div>'+
+    '<section class="panel"><div class="ph"><h2>Pages aujourd\'hui</h2><span class="label">'+dayName(t)+' '+short(t)+' · '+wk.replace('-S',' · S')+'</span></div>'+
+    '<div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th class="n">Boosts actifs</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th><th class="n">J-2</th><th class="n">J-1</th><th class="n">Aujourd\'hui</th><th>Évolution</th><th>Statut semaine</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
+    '<div class="grid2">'+threeDays(dm)+chart14(dm)+'</div></div>';
+}
+function sumRange(dm,a,b){var r={reels:0,boosts:0},n=0;for(var d=a;d<=b;d=addDays(d,1)){var x=dayTotal(dm,d,'all');if(x){n++;r.reels+=x.reels;r.boosts+=x.boosts}}return n?r:null}
+function e0n(v){return nf(v)}
+function tile(l,v,s){return '<div class="tile"><span class="label">'+l+'</span><span class="v">'+v+'</span><span class="s">'+(s||'')+'</span></div>'}
+function emptyStart(){
+  return '<section class="panel"><h2>Commence par créer tes pages</h2><p class="muted" style="margin:0">Ajoute tes pages et attribue-les à tes employés dans l\'onglet Pages et équipe.</p><div class="row"><button class="primary" type="button" data-tab="equipe">Créer une page</button><button type="button" id="demoOn">Voir avec des exemples</button></div></section>';
+}
+function threeDays(dm){
+  var ref=S.threeRef||today(), f=S.page;
+  var ds=[addDays(ref,-2),addDays(ref,-1),ref], v=ds.map(function(d){return dayTotal(dm,d,f)});
+  var cells=ds.map(function(d,i){
+    var cur=v[i], prev=i?v[i-1]:null;
+    var dd=cur&&prev?cur.reels-prev.reels:null;
+    return '<div class="day"><span class="label">'+dayName(d)+' '+short(d)+'</span><span class="big">'+(cur?nf(cur.reels):'—')+'</span>'+
+      '<span>'+(i?delta(dd):'<span class="muted">départ</span>')+'</span><span class="muted" style="font-size:.8rem">boosts '+(cur?nf(cur.boosts):'—')+'</span></div>';
+  }).join('');
+  var g=v[0]&&v[2]?v[2].reels-v[0].reels:null;
+  return '<section class="panel"><div class="ph"><h2>3 jours consécutifs</h2><div class="row">'+pageSelect('threePage',f,true)+'<input type="date" id="threeRef" value="'+ref+'" aria-label="Dernier jour"></div></div>'+
+    '<div class="three">'+cells+'<div class="day total"><span class="label">Évolution 3 jours</span><span class="big">'+delta(g,{plain:true})+'</span><span>'+(g!=null?delta(g,{noNum:true,pct:pct(v[2].reels,v[0].reels)}):'')+'</span><span class="muted" style="font-size:.8rem">messages réels</span></div></div></section>';
+}
+function chart14(dm){
+  var t=today(), days=[]; for(var i=13;i>=0;i--)days.push(addDays(t,-i));
+  var vals=days.map(function(d){return dayTotal(dm,d,S.page)});
+  var max=Math.max(10,Math.max.apply(null,vals.map(function(v){return v?Math.max(v.reels,v.boosts):0})));
+  var W=560,H=210,L=40,B=26,T=10,bw=(W-L-8)/14, gw=bw*0.72, sc=function(x){return T+(H-T-B)*(1-x/max)};
+  var nice=Math.pow(10,Math.floor(Math.log10(max))), step=max/nice>5?nice*2:max/nice>2?nice:nice/2, ticks=[];
+  for(var k=0;k<=max;k+=step)ticks.push(k);
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Messages réels et messages boosts des 14 derniers jours">';
+  ticks.forEach(function(k){var yy=sc(k);svg+='<line x1="'+L+'" x2="'+(W-4)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(yy+4)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--mono)">'+nf(k)+'</text>'});
+  days.forEach(function(d,i){
+    var v=vals[i], x=L+i*bw+(bw-gw)/2, w=(gw-2)/2;
+    if(v){
+      var h1=H-B-sc(v.reels), h2=H-B-sc(v.boosts);
+      svg+='<g><title>'+dayName(d)+' '+short(d)+' · réels '+nf(v.reels)+' · boosts '+nf(v.boosts)+'</title>'+
+        '<rect x="'+x+'" y="'+sc(v.reels)+'" width="'+w+'" height="'+Math.max(0,h1)+'" rx="2" fill="var(--s1)"/>'+
+        '<rect x="'+(x+w+2)+'" y="'+sc(v.boosts)+'" width="'+w+'" height="'+Math.max(0,h2)+'" rx="2" fill="var(--s2)"/>'+
+        '<rect x="'+(L+i*bw)+'" y="'+T+'" width="'+bw+'" height="'+(H-T-B)+'" fill="transparent"/></g>';
+    }
+    if(i%2===1||i===13)svg+='<text x="'+(L+i*bw+bw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--mono)">'+short(d)+'</text>';
+  });
+  svg+='<line x1="'+L+'" x2="'+(W-4)+'" y1="'+(H-B)+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-width="1"/></svg>';
+  return '<section class="panel chart"><div class="ph"><h2>14 derniers jours</h2><div class="legend"><span><i style="background:var(--s1)"></i>Messages réels</span><span><i style="background:var(--s2)"></i>Messages boosts</span></div></div>'+svg+'</section>';
+}
+
+function viewRecap(){
+  var dm=dayMap(), g=S.gran, t=today(), N=g==='jour'?14:g==='semaine'?12:g==='mois'?12:5, list=[];
+  for(var i=0;i<=N;i++){var ref=pstep(t,g,-i);list.push({k:pkey(ref,g),ref:ref,a:aggregate(dm,pkey(ref,g),g,S.page)})}
+  var cur=list[0],prev=list[1];
+  var cmp=function(a,b,field){return a.a&&b.a?a.a[field]-b.a[field]:null};
+  var head='<div class="compare"><span class="label" style="width:100%">'+(g==='jour'?'Aujourd\'hui ↔ hier':g==='semaine'?'Semaine actuelle ↔ semaine précédente':g==='mois'?'Mois actuel ↔ mois précédent':'Année actuelle ↔ année précédente')+'</span>'+
+    '<span class="muted">'+esc(plabel(prev.k,g,prev.ref))+'</span><span class="vs num">'+(prev.a?nf(prev.a.reels):'—')+'</span><span>→</span>'+
+    '<span class="muted">'+esc(plabel(cur.k,g,cur.ref))+'</span><span class="vs num">'+(cur.a?nf(cur.a.reels):'—')+'</span>'+
+    delta(cmp(cur,prev,'reels'),{pct:cur.a&&prev.a?pct(cur.a.reels,prev.a.reels):null})+'</div>';
+  var rows=list.slice(0,N).map(function(p,i){
+    var o=list[i+1], a=p.a;
+    if(!a)return '<tr><td>'+esc(plabel(p.k,g,p.ref))+'</td><td colspan="8" class="muted">Aucune saisie</td></tr>';
+    return '<tr><td><strong>'+esc(plabel(p.k,g,p.ref))+'</strong></td><td class="n">'+nf(a.reels)+'</td><td class="n">'+nf(a.boosts)+'</td><td>'+delta(a.ecart)+'</td>'+
+      '<td class="n">'+nf(a.nbBoosts)+'</td><td class="n">'+(a.moyActifs==null?'—':a.moyActifs.toFixed(1).replace('.',','))+'</td>'+
+      '<td>'+delta(o&&o.a?a.reels-o.a.reels:null,{pct:o&&o.a?pct(a.reels,o.a.reels):null})+'</td><td>'+delta(o&&o.a?a.boosts-o.a.boosts:null)+'</td></tr>';
+  }).join('');
+  return '<section class="panel"><div class="ph"><h2>Récapitulatifs</h2><div class="row">'+granSeg('gran',g)+pageSelect('recapPage',S.page,true)+'</div></div>'+head+
+    '<div class="tablebox"><table><thead><tr><th>Période</th><th class="n">Msg réels</th><th class="n">Msg boosts</th><th>Écart</th><th class="n">Nb boosts</th><th class="n">Moy. actifs/jour</th><th>Réels vs préc.</th><th>Boosts vs préc.</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+}
+function granSeg(name,val){
+  return '<div class="seg" role="group" aria-label="Période">'+['jour','semaine','mois','annee'].map(function(x){var g=x==='annee'?'annee':x;return '<button type="button" data-'+name+'="'+g+'" aria-pressed="'+(val===g)+'">'+(x==='annee'?'Année':cap(x))+'</button>'}).join('')+'</div>';
+}
+
+function viewCal(){
+  var dm=dayMap(), sel=S.selDate||today(), m=S.calMonth||sel.slice(0,7);
+  var first=parse(m+'-01'), start=addDays(m+'-01',-((first.getDay()+6)%7)), cells='';
+  for(var i=0;i<42;i++){
+    var d=addDays(start,i), tot=dayTotal(dm,d,S.page), out=d.slice(0,7)!==m;
+    if(i>=35&&out&&d.slice(0,7)>m)break;
+    cells+='<button type="button" data-day="'+d+'" class="'+(tot?'has ':'')+(d===sel?'sel ':'')+(out?'out':'')+'"><span>'+(+d.slice(8))+'</span><span class="cv">'+(tot?nf(tot.reels):'')+'</span></button>';
+  }
+  var mm=parse(m+'-01');
+  var cal='<section class="panel"><div class="ph"><h2>'+cap(MOIS[mm.getMonth()])+' '+mm.getFullYear()+'</h2><div class="row"><button class="small" type="button" data-cal="-1" aria-label="Mois précédent">←</button><button class="small" type="button" data-cal="0">Aujourd\'hui</button><button class="small" type="button" data-cal="1" aria-label="Mois suivant">→</button></div></div>'+
+    '<div class="cal">'+JC.map(function(j){return '<div class="h">'+j+'</div>'}).join('')+cells+'</div><div class="muted" style="font-size:.82rem">Chiffre = messages réels du jour.</div></section>';
+  var g=S.histGran, k=pkey(sel,g);
+  var es=allEntries().filter(function(e){return S.pages[e.pageId]&&pkey(e.date,g)===k&&(S.page==='all'||e.pageId===S.page)}).sort(function(a,b){return a.horodatage<b.horodatage?1:-1});
+  var rows=es.map(function(e){
+    var t=e.totaux, lastOfDay=(dm[e.pageId]||{})[e.date]===e;
+    return '<tr><td>'+cap(e.jour)+' '+short(e.date)+'</td><td class="num"><strong>'+e.heure+'</strong></td><td>'+esc(S.pages[e.pageId].nom)+'</td><td>'+esc(memberName(e.auteur))+'</td>'+
+      '<td class="n">'+t.actifs+'</td><td class="n">'+t.pause+'</td><td class="n">'+t.supprimes+'</td><td class="n">'+nf(t.messagesBoosts)+'</td><td class="n">'+nf(t.reels)+'</td><td>'+delta(t.ecart)+'</td><td>'+(lastOfDay?'<span class="chip ok">retenue</span>':'<span class="chip none">remplacée</span>')+'</td></tr>';
+  }).join('')||'<tr><td colspan="11" class="empty">Aucune saisie sur cette période.</td></tr>';
+  var hist='<section class="panel"><div class="ph"><h2>Historique · '+esc(plabel(k,g,sel))+'</h2><div class="row">'+granSeg('hist',g)+pageSelect('calPage',S.page,true)+'</div></div>'+
+    '<div class="tablebox"><table><thead><tr><th>Jour</th><th>Heure</th><th>Page</th><th>Saisi par</th><th class="n">Actifs</th><th class="n">Pause</th><th class="n">Suppr.</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th><th>Valeur du jour</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="muted" style="font-size:.82rem">Toutes les saisies sont conservées. La dernière saisie d\'un jour sert de valeur du jour.</div></section>';
+  return '<div style="display:grid;gap:18px">'+cal+hist+'</div>';
+}
+
+function viewValid(){
+  var dm=dayMap(), t=today(), weeks=[];
+  for(var i=0;i<6;i++){var r=pstep(t,'semaine',-i);weeks.push({k:weekKey(r),ref:r})}
+  var html=weeks.map(function(w,wi){
+    var prevK=weekKey(pstep(w.ref,'semaine',-1));
+    var rows=pageIds().map(function(pid){
+      var a=aggregate(dm,w.k,'semaine',pid), pa=aggregate(dm,prevK,'semaine',pid), st=weekStatus(pid,w.k), v=S.valid[w.k+'_'+pid];
+      if(!a)return '';
+      return '<tr><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td class="n">'+a.n+' j</td><td class="n">'+nf(a.boosts)+'</td><td class="n">'+nf(a.reels)+'</td><td>'+delta(a.ecart)+'</td>'+
+        '<td class="n">'+nf(a.nbBoosts)+'</td><td>'+delta(pa?a.reels-pa.reels:null,{pct:pa?pct(a.reels,pa.reels):null})+'</td><td>'+statusChip(st,true)+(v&&st==='valide'?'<div class="muted" style="font-size:.75rem">'+esc(v.leTexte||'')+'</div>':'')+'</td>'+
+        '<td>'+(st==='valide'?'<button class="small" type="button" data-unvalid="'+w.k+'_'+pid+'">Annuler</button>':'<button class="small primary" type="button" data-valid="'+w.k+'_'+pid+'">Valider</button>')+'</td></tr>';
+    }).join('');
+    if(!rows)rows='<tr><td colspan="10" class="empty">Aucune saisie cette semaine.</td></tr>';
+    return '<section class="panel"><div class="ph"><h2>'+esc(plabel(w.k,'semaine',w.ref))+(wi===0?' · en cours':'')+'</h2></div><div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th class="n">Jours saisis</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th><th class="n">Nb boosts</th><th>Évolution vs sem. préc.</th><th>Statut</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+  }).join('');
+  return '<div style="display:grid;gap:18px">'+html+'</div>';
+}
+
+function viewEquipe(){
+  var ids=pageIds(), mids=Object.keys(S.membres);
+  var opts=function(sel){return '<option value="">Non attribuée</option>'+(S.me?'<option value="'+S.me+'"'+(sel===S.me?' selected':'')+'>Moi (administrateur)</option>':'')+mids.filter(function(u){return u!==S.me}).map(function(u){return '<option value="'+u+'"'+(sel===u?' selected':'')+'>'+esc(memberName(u))+'</option>'}).join('')};
+  var prow=ids.map(function(pid){var p=S.pages[pid];return '<tr><td><input id="pn_'+pid+'" value="'+esc(p.nom)+'" data-rename="'+pid+'" aria-label="Nom de la page"></td><td><select id="pa_'+pid+'" data-assign="'+pid+'" aria-label="Responsable">'+opts(p.responsable)+'</select></td><td><button class="link" type="button" data-archive="'+pid+'">Archiver</button></td></tr>'}).join('')||'<tr><td colspan="3" class="empty">Aucune page pour l\'instant.</td></tr>';
+  var mrow=mids.filter(function(u){return u!==S.me}).map(function(u){
+    var n=ids.filter(function(p){return S.pages[p].responsable===u}).map(function(p){return esc(S.pages[p].nom)}).join(', ');
+    return '<tr><td>'+esc(S.names[u]||S.membres[u].nomSaisi||'Employé')+'</td><td><input id="ml_'+u+'" data-label="'+u+'" value="'+esc(S.membres[u].libelle||'')+'" placeholder="Nom affiché" aria-label="Nom affiché"></td><td style="white-space:normal">'+(n||'<span class="muted">Aucune</span>')+'</td></tr>';
+  }).join('')||'<tr><td colspan="3" class="empty">Aucun employé n\'a encore ouvert le lien.</td></tr>';
+  var arch=Object.keys(S.pages).filter(function(p){return S.pages[p].archivee});
+  return '<div class="grid2"><section class="panel"><h2>Pages</h2><form class="row" id="addPage"><input id="newPage" placeholder="Nom de la nouvelle page" required style="flex:1 1 200px"><button class="primary" type="submit">Ajouter</button></form>'+
+    '<div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th></th></tr></thead><tbody>'+prow+'</tbody></table></div>'+
+    (arch.length?'<div class="muted" style="font-size:.85rem">Archivées : '+arch.map(function(p){return esc(S.pages[p].nom)+' <button class="link" type="button" data-unarchive="'+p+'">restaurer</button>'}).join(' · ')+'</div>':'')+'<div class="msg" id="eqMsg" role="status">'+(S.msgs.eq||'')+'</div></section>'+
+    '<section class="panel"><h2>Employés</h2><div style="display:grid;gap:8px"><span class="label">Lien d\'accès des employés</span><div class="copy"><input id="linkBox" readonly value="'+esc(shareUrl())+'" aria-label="Lien"><button type="button" id="copyLink">Copier</button></div>'+
+    '<div class="muted" style="font-size:.85rem">Partage la page avec l\'employé par e-mail (menu Partager), puis envoie-lui ce lien. À sa première ouverture, il apparaît ici et tu peux lui attribuer ses pages.</div></div>'+
+    '<div class="tablebox"><table><thead><tr><th>Compte</th><th>Nom affiché</th><th>Pages attribuées</th></tr></thead><tbody>'+mrow+'</tbody></table></div></section></div>';
+}
+function shareUrl(){try{var u=(document.referrer||'');return /claude\.ai/.test(u)?u.split('#')[0]:'Lien de cette page (bouton Partager)'}catch(e){return ''}}
+function resolveNames(){
+  if(!S.user||!S.user.profiles)return;
+  var ids=Object.keys(S.membres); if(!ids.length)return;
+  S.user.profiles(ids).then(function(ps){var ch=false;ids.forEach(function(u){var n=ps[u]&&ps[u].name||'';if(n&&S.names[u]!==n){S.names[u]=n;ch=true}});if(ch&&S.tab==='equipe'&&!busyInput())render()}).catch(function(){});
+}
+var pending=false;
+function soft(){if(busyInput())pending=true;else render()}
+document.addEventListener('focusout',function(){setTimeout(function(){if(pending&&!busyInput()){pending=false;render()}},50)});
+function busyInput(){var a=document.activeElement;return a&&(a.tagName==='INPUT'||a.tagName==='SELECT')&&a.id!=='threeRef'}
+
+/* ---------- Espace de saisie ---------- */
+function myPages(isEmployee){
+  return pageIds().filter(function(pid){return isEmployee?S.pages[pid].responsable===S.me:true});
+}
+function lastOwnEntry(pid){
+  var mine=(S.entries[S.me]||[]).filter(function(e){return e.pageId===pid}).sort(function(a,b){return a.horodatage<b.horodatage?1:-1});
+  if(mine[0])return mine[0];
+  if(S.owner){var dm=dayMap();return latestState(pid,dm)}
+  return null;
+}
+function draft(pid){
+  if(!S.drafts[pid]){
+    var last=lastOwnEntry(pid);
+    S.drafts[pid]={boosts:last?last.boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}):[{id:uid(),nom:'Boost 1',statut:'actif',messages:''}],reels:''};
+  }
+  return S.drafts[pid];
+}
+function viewSaisie(isEmployee){
+  if(isEmployee&&!S.db&&!S.demo)return '<section class="panel"><p class="empty">Connecte-toi sur claude.ai pour ouvrir ton espace de saisie.</p></section>';
+  var ids=myPages(isEmployee);
+  if(!ids.length)return '<section class="panel"><h2>Aucune page attribuée</h2><p class="muted" style="margin:0">'+(isEmployee?'Ton accès est enregistré. L\'administrateur doit maintenant t\'attribuer tes pages.':'Crée une page dans l\'onglet Pages et équipe.')+'</p></section>';
+  var cards=ids.map(function(pid){
+    var d=draft(pid), t=totaux(d.boosts,d.reels), last=lastOwnEntry(pid);
+    var rows=d.boosts.map(function(b,i){
+      return '<div class="boost'+(b.statut==='supprime'?' del':'')+'"><input class="bn" id="bn_'+pid+'_'+b.id+'" data-b="'+pid+'|'+i+'|nom" value="'+esc(b.nom)+'" aria-label="Nom du boost">'+
+        '<select id="bs_'+pid+'_'+b.id+'" data-b="'+pid+'|'+i+'|statut" aria-label="Statut">'+Object.keys(STATUTS).map(function(s){return '<option value="'+s+'"'+(b.statut===s?' selected':'')+'>'+STATUTS[s]+'</option>'}).join('')+'</select>'+
+        '<input id="bm_'+pid+'_'+b.id+'" type="number" min="0" step="1" inputmode="numeric" data-b="'+pid+'|'+i+'|messages" value="'+esc(b.messages)+'" placeholder="Messages" aria-label="Messages du boost">'+
+        '<button class="link" type="button" data-rmb="'+pid+'|'+i+'" aria-label="Retirer la ligne">✕</button></div>';
+    }).join('');
+    return '<section class="panel pagecard" data-card="'+pid+'"><div class="ph"><h2>'+esc(S.pages[pid].nom)+'</h2><span class="label">'+(last?'Dernière saisie : '+cap(last.jour)+' '+short(last.date)+' à '+last.heure:'Aucune saisie')+'</span></div>'+
+      '<div style="display:grid;gap:8px"><div class="boost label" style="font-size:.66rem"><span class="bn">Boost</span><span>Statut</span><span>Messages</span><span></span></div>'+rows+
+      '<div><button class="small" type="button" data-addb="'+pid+'">+ Ajouter un boost</button></div></div>'+
+      '<div class="row"><label class="label" for="reels_'+pid+'">Messages réels de la page</label><input id="reels_'+pid+'" type="number" min="0" step="1" inputmode="numeric" data-reels="'+pid+'" value="'+esc(d.reels)+'" style="width:140px" placeholder="0"></div>'+
+      '<div class="sumrow" id="sum_'+pid+'">'+sumHtml(t)+'</div>'+
+      '<div class="row"><button class="primary" type="button" data-save="'+pid+'">Enregistrer</button><span class="muted" style="font-size:.85rem">Date et heure ajoutées automatiquement.</span></div><div class="msg '+((S.msgs[pid]||{}).c||'')+'" role="status">'+((S.msgs[pid]||{}).t||'')+'</div></section>';
+  }).join('');
+  var hist='';
+  var mine=(S.entries[S.me]||[]).filter(function(e){return S.pages[e.pageId]}).sort(function(a,b){return a.horodatage<b.horodatage?1:-1}).slice(0,10);
+  if(isEmployee&&mine.length){
+    hist='<section class="panel"><h2>Mes dernières saisies</h2><div class="tablebox"><table><thead><tr><th>Jour</th><th>Heure</th><th>Page</th><th class="n">Actifs</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th></tr></thead><tbody>'+
+      mine.map(function(e){return '<tr><td>'+cap(e.jour)+' '+short(e.date)+'</td><td class="num">'+e.heure+'</td><td>'+esc(S.pages[e.pageId].nom)+'</td><td class="n">'+e.totaux.actifs+'</td><td class="n">'+nf(e.totaux.messagesBoosts)+'</td><td class="n">'+nf(e.totaux.reels)+'</td><td>'+delta(e.totaux.ecart)+'</td></tr>'}).join('')+'</tbody></table></div></section>';
+  }
+  return '<div style="display:grid;gap:18px">'+cards+hist+'</div>';
+}
+function sumHtml(t){
+  return '<div><span class="label">Actifs</span><span class="v">'+t.actifs+'</span></div><div><span class="label">En pause</span><span class="v">'+t.pause+'</span></div><div><span class="label">Supprimés</span><span class="v">'+t.supprimes+'</span></div>'+
+    '<div><span class="label">Total boosts</span><span class="v">'+t.total+'</span></div><div><span class="label">Msg boosts actifs</span><span class="v">'+nf(t.messagesBoosts)+'</span></div><div><span class="label">Écart réels</span><span class="v">'+(t.reels==null?'—':delta(t.ecart,{plain:true}))+'</span></div>';
+}
+function saveEntry(pid){
+  var d=draft(pid);
+  if(d.reels===''||isNaN(+d.reels)){S.msgs[pid]={t:'Indique le nombre de messages réels de la page.',c:'err'};render();return}
+  if(d.boosts.some(function(b){return b.messages===''||isNaN(+b.messages)||+b.messages<0})){S.msgs[pid]={t:'Indique le nombre de messages de chaque boost (0 si aucun).',c:'err'};render();return}
+  var now=new Date();
+  var boosts=d.boosts.map(function(b){return{id:b.id,nom:(b.nom||'').trim()||'Boost',statut:b.statut,messages:Math.round(+b.messages)}});
+  var e={pageId:pid,auteur:S.me||'demo',horodatage:now.toISOString(),date:ymd(now),jour:JOURS[now.getDay()],heure:pad(now.getHours())+':'+pad(now.getMinutes()),
+    boosts:boosts,totaux:totaux(boosts,Math.round(+d.reels))};
+  var done=function(){S.drafts[pid]={boosts:boosts.map(function(b){return Object.assign({},b)}),reels:''};S.msgs[pid]={t:'✓ Enregistré '+e.jour+' '+short(e.date)+' à '+e.heure,c:'ok'};render()};
+  if(S.demo||!S.db){e.id=uid();(S.entries[e.auteur]=S.entries[e.auteur]||[]).push(e);done();return}
+  var btn=document.querySelector('[data-save="'+pid+'"]'); if(btn)btn.disabled=true;
+  S.db.collection('saisies/'+S.me+'/entrees').add(e).then(done,function(err){S.msgs[pid]={t:err&&err.code==='quota_exceeded'?'Espace de stockage plein. Préviens l\'administrateur.':'Enregistrement refusé. Vérifie que l\'administrateur t\'a donné l\'accès en modification.',c:'err'};render()});
+}
+
+/* ---------- Événements ---------- */
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest('button,tr.click'); if(!b)return;
+  var ds=b.dataset;
+  if(ds.tab){S.tab=ds.tab;render();return}
+  if(b.id==='demoOn'){startDemo();return}
+  if(b.id==='demoOff'){stopDemo();return}
+  if(ds.gotoPage){S.page=ds.gotoPage;S.tab='recap';render();return}
+  if(ds.gran){S.gran=ds.gran;render();return}
+  if(ds.hist){S.histGran=ds.hist;render();return}
+  if(ds.day){S.selDate=ds.day;S.calMonth=ds.day.slice(0,7);render();return}
+  if(ds.cal){var m=S.calMonth||(S.selDate||today()).slice(0,7);if(ds.cal==='0'){S.selDate=today();S.calMonth=today().slice(0,7)}else{var d=parse(m+'-01');d.setMonth(d.getMonth()+(+ds.cal));S.calMonth=ymd(d).slice(0,7)}render();return}
+  if(ds.addb){var dr=draft(ds.addb);dr.boosts.push({id:uid(),nom:'Boost '+(dr.boosts.length+1),statut:'actif',messages:''});render();var ins=document.querySelectorAll('[data-card="'+ds.addb+'"] .bn');if(ins.length)ins[ins.length-1].focus();return}
+  if(ds.rmb){var p=ds.rmb.split('|');var dr2=draft(p[0]);var bb=dr2.boosts[+p[1]];
+    if(b.dataset.armed!=='1'&&bb.messages!==''){b.dataset.armed='1';b.textContent='Retirer ?';return}
+    dr2.boosts.splice(+p[1],1);render();return}
+  if(ds.save){saveEntry(ds.save);return}
+  if(ds.valid){validate(ds.valid,true);return}
+  if(ds.unvalid){validate(ds.unvalid,false);return}
+  if(ds.archive){setPage(ds.archive,{archivee:true});return}
+  if(ds.unarchive){setPage(ds.unarchive,{archivee:false});return}
+  if(b.id==='copyLink'){var box=$('linkBox');navigator.clipboard.writeText(box.value).then(function(){S.msgs.eq='Lien copié.';$('eqMsg').textContent='Lien copié.'},function(){box.select()});return}
+});
+document.addEventListener('input',function(ev){
+  var el=ev.target, ds=el.dataset;
+  if(ds.b){var p=ds.b.split('|');var d=draft(p[0]);d.boosts[+p[1]][p[2]]=el.value;
+    if(p[2]==='statut'){render();return}
+    $('sum_'+p[0]).innerHTML=sumHtml(totaux(d.boosts,d.reels));return}
+  if(ds.reels){var d2=draft(ds.reels);d2.reels=el.value;$('sum_'+ds.reels).innerHTML=sumHtml(totaux(d2.boosts,d2.reels));return}
+});
+document.addEventListener('change',function(ev){
+  var el=ev.target, ds=el.dataset;
+  if(el.id==='threePage'||el.id==='recapPage'||el.id==='calPage'){S.page=el.value;render();return}
+  if(el.id==='threeRef'){S.threeRef=el.value||null;render();return}
+  if(ds.assign){setPage(ds.assign,{responsable:el.value||null});return}
+  if(ds.rename){var n=el.value.trim();if(n)setPage(ds.rename,{nom:n});return}
+  if(ds.label){setMember(ds.label,{libelle:el.value.trim()});return}
+});
+document.addEventListener('submit',function(ev){
+  if(ev.target.id!=='addPage')return; ev.preventDefault();
+  var n=$('newPage').value.trim(); if(!n)return;
+  var id='p'+uid(), p={nom:n,responsable:null,archivee:false,creeLe:new Date().toISOString()};
+  if(S.demo||!S.db){S.pages[id]=p;render();return}
+  S.db.doc('pages/'+id).set(p).then(function(){S.msgs.eq='Page « '+n+' » ajoutée.'},function(){S.msgs.eq='Ajout refusé.';render()});
+});
+function setPage(id,patch){
+  Object.assign(S.pages[id],patch);
+  if(S.demo||!S.db){render();return}
+  S.db.doc('pages/'+id).update(patch).catch(function(){S.msgs.eq='Modification refusée.';render()});
+  render();
+}
+function setMember(u,patch){
+  Object.assign(S.membres[u],patch);
+  if(S.demo||!S.db){render();return}
+  S.db.doc('membres/'+u).update(patch).catch(function(){});
+  render();
+}
+function validate(key,on){
+  var now=new Date();
+  var v=on?{statut:'valide',par:S.me,le:now.toISOString(),leTexte:'le '+short(ymd(now))+' à '+pad(now.getHours())+':'+pad(now.getMinutes())}:{statut:'averifier',par:S.me,le:now.toISOString()};
+  var parts=key.split('_'), wk=parts[0], pid=parts.slice(1).join('_');
+  if(on){var a=aggregate(dayMap(),wk,'semaine',pid);if(a)v.controle={boosts:a.boosts,reels:a.reels,ecart:a.ecart,nbBoosts:a.nbBoosts}}
+  S.valid[key]=v;
+  if(!S.demo&&S.db)S.db.doc('validations/'+key).set(v).catch(function(){});
+  render();
+}
+
+/* ---------- Démo (en mémoire, rien n'est enregistré) ---------- */
+var saved=null;
+function startDemo(){
+  saved={pages:S.pages,membres:S.membres,entries:S.entries,valid:S.valid,me:S.me};
+  S.demo=true; S.pages={}; S.membres={}; S.entries={}; S.valid={};
+  S.me=S.me||'moi';
+  var emp=['e1','e2'];
+  S.membres={e1:{libelle:'Employé 1'},e2:{libelle:'Employé 2'}};
+  var defs=[['pa','Page A','e1',170,5],['pb','Page B','e2',215,-6],['pc','Page C','e1',120,2]];
+  defs.forEach(function(d){S.pages[d[0]]={nom:d[1],responsable:d[2],archivee:false}});
+  var seed=7; function rnd(){seed=(seed*9301+49297)%233280;return seed/233280}
+  defs.forEach(function(d){
+    var base=d[3];
+    for(var i=34;i>=0;i--){
+      var date=addDays(today(),-i), n=3+Math.floor(rnd()*3), boosts=[];
+      base=Math.max(40,base+d[4]*0.3+Math.round((rnd()-0.5)*16));
+      var share=base*(0.85+rnd()*0.25);
+      for(var k=0;k<n;k++)boosts.push({id:d[0]+k,nom:'Boost '+(k+1),statut:k===n-1&&rnd()>0.5?'pause':(k===0&&rnd()>0.85?'supprime':'actif'),messages:Math.round(share/n)});
+      var dt=parse(date); dt.setHours(i?17:8,Math.floor(rnd()*59));
+      var e={id:d[0]+i,pageId:d[0],auteur:d[2],horodatage:dt.toISOString(),date:date,jour:JOURS[dt.getDay()],heure:pad(dt.getHours())+':'+pad(dt.getMinutes()),boosts:boosts,totaux:totaux(boosts,Math.round(base))};
+      (S.entries[d[2]]=S.entries[d[2]]||[]).push(e);
+    }
+  });
+  S.valid[weekKey(pstep(today(),'semaine',-1))+'_pa']={statut:'valide',leTexte:'exemple'};
+  S.drafts={}; render();
+}
+function stopDemo(){if(saved){S.pages=saved.pages;S.membres=saved.membres;S.entries=saved.entries;S.valid=saved.valid;S.me=saved.me}S.demo=false;S.drafts={};render()}
+
+/* ---------- Horloge ---------- */
+function tick(){var n=new Date();$('clock').textContent=cap(JOURS[n.getDay()])+' '+pad(n.getDate())+'/'+pad(n.getMonth()+1)+'/'+n.getFullYear()+' · '+pad(n.getHours())+':'+pad(n.getMinutes())}
+tick(); setInterval(tick,15000);
+
+/* ---------- Connexion aux données ---------- */
+function subEntries(u){
+  if(S.subs[u])return;
+  S.subs[u]=S.db.collection('saisies/'+u+'/entrees').onSnapshot(function(snap){
+    S.entries[u]=snap.docs.map(function(d){var x=Object.assign({},d.data());x.id=d.id;return x});
+    if(!S.demo)soft();
+  },function(){});
+}
+function watch(){
+  var db=S.db;
+  db.collection('pages').onSnapshot(function(s){if(S.demo)return;var p={};s.docs.forEach(function(d){p[d.id]=Object.assign({},d.data())});S.pages=p;soft()},function(){});
+  if(S.owner){
+    db.collection('membres').onSnapshot(function(s){if(S.demo)return;var m={};s.docs.forEach(function(d){m[d.id]=Object.assign({},d.data())});S.membres=m;Object.keys(m).forEach(subEntries);soft();resolveNames()},function(){});
+    db.collection('validations').onSnapshot(function(s){if(S.demo)return;var v={};s.docs.forEach(function(d){v[d.id]=Object.assign({},d.data())});S.valid=v;soft()},function(){});
+  }
+  if(S.me)subEntries(S.me);
+}
+function boot(){
+  render();
+  if(!window.claude||!window.claude.use){$('noDb').hidden=false;S.owner=true;S.ready=true;render();return}
+  Promise.all([window.claude.use('db'),window.claude.use('user')]).then(function(r){
+    S.db=r[0]; S.user=r[1];
+    var p=S.user?Promise.all([S.user.isOwner(),S.user.id(),S.user.name?S.user.name():Promise.resolve('')]):Promise.resolve([true,null,'']);
+    return p.then(function(x){
+      S.owner=!!x[0]; S.me=x[1]; S.ready=true;
+      if(!S.db){$('noDb').hidden=false;render();return}
+      if(!S.owner&&S.me){
+        var ref=S.db.doc('membres/'+S.me);
+        ref.get().then(function(s){if(!s.exists)return ref.set({inscritLe:new Date().toISOString(),nomSaisi:x[2]||''})}).catch(function(){});
+      }
+      watch(); render();
+    });
+  }).catch(function(){$('noDb').hidden=false;S.owner=true;S.ready=true;render()});
+}
+boot();
+})();
+</script>
+
+</body>
+</html>
