@@ -11,24 +11,24 @@
 <style>
 /* Layout: barre d'onglets admin, tuiles de synthèse, tableaux de contrôle ; espace de saisie en cartes par page ; une colonne sur téléphone */
 :root{
-  --bg:#f2f4f1; --surface:#ffffff; --ink:#18201b; --muted:#5d6961; --line:#dce2db; --soft:#e8eee9;
-  --accent:#1d6b49; --accent-ink:#ffffff;
-  --up:#1a7a45; --down:#c0392b; --flat:#6b746e; --upbg:#e3f3e8; --downbg:#fbe7e4; --flatbg:#eceeed;
-  --s1:#2f5fb3; --s2:#b9761d;
+  --bg:#f0f6fb; --surface:#ffffff; --ink:#0f1e2b; --muted:#56697a; --line:#d5e3ee; --soft:#e5f1fa;
+  --accent:#0284c7; --accent-ink:#ffffff; --sky:#e0f2fe; --skyink:#075985;
+  --up:#15803d; --down:#c62828; --flat:#64748b; --upbg:#dcfce7; --downbg:#fde8e8; --flatbg:#eef2f6;
+  --s1:#0284c7; --s2:#d97706; --s0:#b6c7d4;
   --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
   --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#111513; --surface:#191f1c; --ink:#e6ebe7; --muted:#97a39b; --line:#2a322d; --soft:#212924;
-  --accent:#4cc28c; --accent-ink:#0c1510;
-  --up:#4fcb85; --down:#f08070; --flat:#9aa39d; --upbg:#173325; --downbg:#3a1d19; --flatbg:#252b28;
-  --s1:#5585d6; --s2:#b07a2c; color-scheme:dark}}
+  --bg:#0c1620; --surface:#13202c; --ink:#e2edf5; --muted:#8ea5b7; --line:#23384a; --soft:#1a2b3a;
+  --accent:#38bdf8; --accent-ink:#04131f; --sky:#0f2e44; --skyink:#bae6fd;
+  --up:#4ade80; --down:#f87171; --flat:#94a3b8; --upbg:#12321f; --downbg:#3b1717; --flatbg:#1f2b36;
+  --s1:#1693d6; --s2:#c9760a; --s0:#3d5263; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#111513; --surface:#191f1c; --ink:#e6ebe7; --muted:#97a39b; --line:#2a322d; --soft:#212924;
-  --accent:#4cc28c; --accent-ink:#0c1510;
-  --up:#4fcb85; --down:#f08070; --flat:#9aa39d; --upbg:#173325; --downbg:#3a1d19; --flatbg:#252b28;
-  --s1:#5585d6; --s2:#b07a2c; color-scheme:dark}
+  --bg:#0c1620; --surface:#13202c; --ink:#e2edf5; --muted:#8ea5b7; --line:#23384a; --soft:#1a2b3a;
+  --accent:#38bdf8; --accent-ink:#04131f; --sky:#0f2e44; --skyink:#bae6fd;
+  --up:#4ade80; --down:#f87171; --flat:#94a3b8; --upbg:#12321f; --downbg:#3b1717; --flatbg:#1f2b36;
+  --s1:#1693d6; --s2:#c9760a; --s0:#3d5263; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);padding-inline:16px;padding-block:18px 48px}
 .wrap{max-width:1240px;margin:0 auto;display:grid;gap:18px}
@@ -49,7 +49,7 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(-
 .tile{background:var(--surface);padding:14px 16px;display:grid;gap:2px;align-content:start;min-width:0}
 .tile .v{font-family:var(--display);font-size:1.75rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
 .tile .s{font-size:.85rem;min-height:1.3em}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:14px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:14px;min-width:0;align-content:start}
 .ph{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
 .tablebox{overflow-x:auto}
@@ -106,10 +106,50 @@ button:disabled{opacity:.5;cursor:default}
 .reelbox{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--soft);border:2px solid var(--accent);border-radius:12px;padding:12px 14px}
 .reelbox label{display:grid;gap:2px;cursor:pointer}
 .reelbox .rt{font-family:var(--display);font-weight:700;font-size:1.05rem}
-.reelbox input{font-size:1.5rem;font-weight:700;width:170px;background:var(--surface)}
+.reelbox input{font-size:1.6rem;font-weight:700;width:170px;background:var(--surface)}
 .importbox{border:1px dashed var(--line);border-radius:12px;padding:12px;display:grid;gap:10px}
 .names{display:flex;flex-wrap:wrap;gap:6px}
 .names span{background:var(--soft);border-radius:999px;padding:2px 10px;font-size:.82rem}
+header.top{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:14px 18px}
+header.top .label{color:inherit;opacity:.85}
+header.top .clock{background:rgba(255,255,255,.16);border-color:transparent;color:inherit}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:14px;padding:12px 14px;display:grid;gap:3px;align-content:start;min-width:0}
+.card .v{font-family:var(--display);font-size:1.7rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.card .s{font-size:.82rem;min-height:1.3em}
+.okc{color:var(--up)} .downc{color:var(--down)}
+.cpt{font-family:var(--mono);font-weight:700;white-space:nowrap}
+.pbar{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.week button{display:grid;gap:0;justify-items:center;padding:6px 4px;background:var(--soft);border-color:transparent;font-weight:600}
+.week button span{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.week button b{font-family:var(--display);font-size:1.15rem}
+.week button.tday{border-color:var(--accent)}
+.week button.on{background:var(--accent);color:var(--accent-ink)} .week button.on span{color:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border-radius:999px;padding:5px 12px;font-size:.86rem;background:var(--surface)}
+.chips button[aria-pressed="true"]{background:var(--sky);color:var(--skyink);border-color:var(--accent)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.alerts{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.alerts li{display:flex;gap:8px;align-items:flex-start;background:var(--downbg);border-radius:10px;padding:8px 12px;font-size:.92rem}
+.alertp{border-color:var(--down)}
+.okline{background:var(--upbg);color:var(--up);border-radius:10px;padding:8px 12px;font-size:.9rem;font-weight:600}
+details summary{cursor:pointer;font-weight:600}
+.wcmp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.wcmp>div{background:var(--soft);border-radius:10px;padding:8px 10px;display:grid;gap:2px;min-width:0}
+.wcmp .v{font-family:var(--display);font-weight:700;font-size:1.25rem}
+.days7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.days7 .dl{background:var(--soft);border-radius:10px;padding:6px 8px;display:grid;gap:2px;min-width:0;font-size:.85rem}
+.days7 .dl b{font-size:1.05rem}
+.days7 .d{font-size:.72rem;padding:0 4px}
+tr.tot td{border-top:2px solid var(--ink);background:var(--soft);font-weight:700}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.fl{display:grid;gap:3px}
+.boostbox{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.boostbox summary{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select.st-actif{color:var(--up);font-weight:700} select.st-pause{color:var(--down);font-weight:700}
+button.big{font-size:1.05rem;padding:10px 20px}
+@media (max-width:640px){.wcmp{grid-template-columns:repeat(2,minmax(0,1fr))}.days7{grid-template-columns:repeat(4,minmax(0,1fr))}.week b{font-size:1rem}}
 [hidden]{display:none!important}
 @media (max-width:980px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
 @media (max-width:640px){
@@ -139,9 +179,12 @@ button:disabled{opacity:.5;cursor:default}
 var JOURS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
 var JC=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-var STATUTS={actif:'Actif',pause:'En pause',supprime:'Supprimé'};
+/* Statuts des comptes Boost. Pour en ajouter un plus tard : une ligne ici.
+   actif:true = compte comme actif ; hors:true = ne compte plus parmi les comptes renseignés. */
+var STATUTS={actif:{l:'Actif',actif:true,c:'ok'},pause:{l:'Pause',c:'todo'},supprime:{l:'Supprimé',hors:true,c:'none'}};
 var S={db:null,user:null,me:null,owner:false,pages:{},membres:{},entries:{},valid:{},names:{},
-  demo:false,tab:'dash',gran:'semaine',page:'all',calMonth:null,selDate:null,histGran:'jour',threeRef:null,drafts:{},msgs:{},subs:{}};
+  demo:false,tab:'dash',gran:'semaine',page:'all',calMonth:null,selDate:null,histGran:'jour',threeRef:null,drafts:{},msgs:{},subs:{},open:{},
+  dp:'jour',dDay:null,pa:null,pb:null,rp:'7j',ra:null,rb:null,rEmp:'',rBoost:'',rStat:'',mesure:'b'};
 var $=function(id){return document.getElementById(id)};
 function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function pad(n){return (n<10?'0':'')+n}
@@ -207,18 +250,43 @@ function nouveaux(b,base){
   if(!(b.id in base))return c; var p=+base[b.id]||0; return c>=p?c-p:0;
 }
 function baseOf(e){if(!e)return null;var m={};e.boosts.forEach(function(b){m[b.id]=+b.messages||0});return m}
-function totaux(boosts,reels,base){
-  var t={actifs:0,pause:0,supprimes:0,total:0,messagesBoosts:0};
-  (boosts||[]).forEach(function(b){t.total++;var m=nouveaux(b,base);if(b.statut==='actif'){t.actifs++;t.messagesBoosts+=m}else if(b.statut==='pause')t.pause++;else t.supprimes++});
-  t.reels=reels==null||reels===''?null:+reels; t.ecart=t.reels==null?null:t.reels-t.messagesBoosts; return t;
+/* Comptes Boost : seul le statut décide. « Renseignés » = tous sauf les statuts hors compte (supprimé). */
+function stInfo(s){return STATUTS[s]||{l:s?cap(String(s)):'?',c:'none'}}
+function comptes(boosts){
+  var r={actifs:0,pause:0,autres:0,supprimes:0,renseignes:0};
+  (boosts||[]).forEach(function(b){var i=stInfo(b.statut);if(i.hors){r.supprimes++;return}r.renseignes++;if(i.actif)r.actifs++;else if(b.statut==='pause')r.pause++;else r.autres++});
+  return r;
 }
-/* Valeur du jour d'une page = dernière saisie de ce jour */
+function comptesHtml(c,full){
+  if(!c||!c.renseignes)return '<span class="muted">—</span>';
+  return '<span class="cpt"><b class="okc">'+c.actifs+'</b>/'+c.renseignes+'</span>'+(c.pause?' <span class="chip todo">'+c.pause+' pause</span>':full?' <span class="chip ok">0 pause</span>':'');
+}
+/* Différence = messages boosts − messages réels */
+function totaux(boosts,reels,base){
+  var c=comptes(boosts), mb=0;
+  (boosts||[]).forEach(function(b){if(!stInfo(b.statut).hors)mb+=nouveaux(b,base)});
+  var r=reels==null||reels===''?null:+reels;
+  return {actifs:c.actifs,pause:c.pause,supprimes:c.supprimes,renseignes:c.renseignes,total:c.renseignes,messagesBoosts:mb,reels:r,ecart:r==null?null:mb-r};
+}
+/* Valeur du jour d'une page, construite à partir de toutes les saisies du jour :
+   messages réels = dernière saisie qui en contient ; messages boosts = dernière saisie de compteurs ;
+   statuts = dernière liste de boosts connue (reportée d'un jour à l'autre). */
 function dayMap(){
+  var by={};
+  allEntries().forEach(function(e){if(!S.pages[e.pageId])return;var p=by[e.pageId]||(by[e.pageId]={});(p[e.date]=p[e.date]||[]).push(e)});
   var m={};
-  allEntries().forEach(function(e){
-    if(!S.pages[e.pageId])return;
-    var p=m[e.pageId]||(m[e.pageId]={});
-    if(!p[e.date]||p[e.date].horodatage<e.horodatage)p[e.date]=e;
+  Object.keys(by).forEach(function(pid){
+    var out=m[pid]={}, lastB=null;
+    Object.keys(by[pid]).sort().forEach(function(d){
+      var es=by[pid][d].sort(function(a,b){return a.horodatage<b.horodatage?-1:1});
+      var wB=null,wC=null,wR=null;
+      es.forEach(function(e){if(e.boosts&&e.boosts.length){wB=e;if(e.saisieCompteurs!==false)wC=e}if(e.totaux&&e.totaux.reels!=null)wR=e});
+      if(wB)lastB=wB;
+      var last=es[es.length-1], boosts=lastB?lastB.boosts:[], c=comptes(boosts);
+      var mb=wC?wC.totaux.messagesBoosts:null, r=wR?wR.totaux.reels:null;
+      out[d]={pageId:pid,date:d,jour:last.jour,heure:last.heure,horodatage:last.horodatage,auteur:(wR||last).auteur,boosts:boosts,boostsDuJour:!!wC,entries:es,reelEntry:wR,
+        totaux:{actifs:c.actifs,pause:c.pause,supprimes:c.supprimes,renseignes:c.renseignes,total:c.renseignes,messagesBoosts:mb,reels:r,ecart:mb!=null&&r!=null?mb-r:null}};
+    });
   });
   return m;
 }
@@ -229,7 +297,7 @@ function latestState(pid,dm,upTo){
 }
 function dayTotal(dm,date,filter){
   var r={reels:0,boosts:0,actifs:0,n:0};
-  pageIds(filter).forEach(function(pid){var e=(dm[pid]||{})[date];if(e){r.n++;r.reels+=e.totaux.reels||0;r.boosts+=e.totaux.messagesBoosts;r.actifs+=e.totaux.actifs}});
+  pageIds(filter).forEach(function(pid){var e=(dm[pid]||{})[date];if(e){r.n++;r.reels+=e.totaux.reels||0;r.boosts+=e.totaux.messagesBoosts||0;r.actifs+=e.totaux.actifs}});
   return r.n?r:null;
 }
 function aggregate(dm,k,g,filter){
@@ -238,15 +306,60 @@ function aggregate(dm,k,g,filter){
     var last=null;
     Object.keys(dm[pid]||{}).forEach(function(d){
       if(pkey(d,g)!==k)return; var e=dm[pid][d]; r.n++;
-      r.reels+=e.totaux.reels||0; r.boosts+=e.totaux.messagesBoosts;
+      r.reels+=e.totaux.reels||0; r.boosts+=e.totaux.messagesBoosts||0;
       r.days[d]=(r.days[d]||0)+e.totaux.actifs;
       if(!last||d>last.date)last=e;
     });
-    if(last)r.nbBoosts+=last.totaux.total;
+    if(last)r.nbBoosts+=last.totaux.renseignes;
   });
   var dk=Object.keys(r.days); r.moyActifs=dk.length?dk.reduce(function(s,d){return s+r.days[d]},0)/dk.length:null;
-  r.ecart=r.reels-r.boosts; return r.n?r:null;
+  r.ecart=r.boosts-r.reels; return r.n?r:null;
 }
+/* ---------- Périodes et totaux sur une plage de dates ---------- */
+var PERIODES=[['jour','Aujourd\'hui'],['hier','Hier'],['7j','7 derniers jours'],['sem','Cette semaine'],['semp','Semaine précédente'],['mois','Ce mois'],['perso','Période personnalisée']];
+function periode(type,day,pa,pb){
+  var t=today(), m=monday(t);
+  if(type==='hier')return {a:addDays(t,-1),b:addDays(t,-1)};
+  if(type==='7j')return {a:addDays(t,-6),b:t};
+  if(type==='sem')return {a:m,b:t};
+  if(type==='semp')return {a:addDays(m,-7),b:addDays(m,-1)};
+  if(type==='mois')return {a:t.slice(0,8)+'01',b:t};
+  if(type==='perso'){var x=pa||addDays(t,-6),y=pb||t;if(x>y){var z=x;x=y;y=z}return {a:x,b:y}}
+  var d=day||t; return {a:d,b:d};
+}
+function nDays(p){return Math.round((parse(p.b)-parse(p.a))/864e5)+1}
+function prevRange(p){var n=nDays(p);return {a:addDays(p.a,-n),b:addDays(p.a,-1)}}
+function rangeLabel(p){var t=today();if(p.a===p.b)return p.a===t?'aujourd\'hui':p.a===addDays(t,-1)?'hier':dayName(p.a)+' '+short(p.a);return short(p.a)+' – '+short(p.b)}
+function inPages(f){return pageIds(f&&f.page).filter(function(pid){return !f||!f.emp||(f.emp==='_none'?!S.pages[pid].responsable:S.pages[pid].responsable===f.emp)})}
+/* Valeurs d'une journée de page ; un filtre compte Boost / statut ne garde que les boosts correspondants */
+function dayVals(c,f){
+  var b=c.totaux.messagesBoosts;
+  if(f&&(f.boost||f.statut)){
+    if(!c.boostsDuJour)b=null;
+    else{b=0;c.boosts.forEach(function(x){if(stInfo(x.statut).hors)return;if(f.boost&&x.nom!==f.boost)return;if(f.statut&&x.statut!==f.statut)return;b+=(+x.nouveaux||0)})}
+  }
+  return {b:b,r:c.totaux.reels};
+}
+function rangeAgg(dm,a,b,pids,f){
+  var r={b:0,r:0,nB:0,nR:0,nBR:0,bBR:0,rBR:0,days:{},pages:{}};
+  pids.forEach(function(pid){
+    var d=dm[pid]||{}, pp=r.pages[pid]={b:0,r:0,nB:0,nR:0,nBR:0,bBR:0,rBR:0};
+    Object.keys(d).forEach(function(k){
+      if(k<a||k>b)return;
+      var v=dayVals(d[k],f), dd=r.days[k]||(r.days[k]={b:0,r:0,nB:0,nR:0,nBR:0,bBR:0,rBR:0});
+      [r,pp,dd].forEach(function(o){
+        if(v.b!=null){o.b+=v.b;o.nB++}
+        if(v.r!=null){o.r+=v.r;o.nR++}
+        if(v.b!=null&&v.r!=null){o.nBR++;o.bBR+=v.b;o.rBR+=v.r}
+      });
+    });
+  });
+  return r;
+}
+/* Différence calculée seulement sur les jours où les deux chiffres existent */
+function diffOf(x){return x&&x.nBR?x.bBR-x.rBR:null}
+function mv(x){if(!x)return null;var n=S.mesure==='r'?x.nR:x.nB;return n?x[S.mesure]:null}
+function mLabel(){return S.mesure==='r'?'messages réels':'messages boosts'}
 function memberName(u){
   if(!u)return '—';
   if(u==='import')return 'Import Excel';
@@ -283,47 +396,152 @@ function pageSelect(id,val,withAll){
 }
 
 function viewDash(){
-  var dm=dayMap(), t=today(), y=addDays(t,-1), y2=addDays(t,-2), ids=pageIds(), wk=weekKey(t);
+  var dm=dayMap(), t=today(), ids=pageIds(), wk=weekKey(t);
   if(!ids.length)return emptyStart();
-  var curA=0,curB=0,curR=0,hasR=false,best=null,worst=null;
+  var P=periode(S.dp,S.dDay,S.pa,S.pb), PP=prevRange(P), pl=rangeLabel(P);
+  var cur=rangeAgg(dm,P.a,P.b,ids), prv=rangeAgg(dm,PP.a,PP.b,ids);
+  var m=monday(t), el=nDays({a:m,b:t});
+  var W=rangeAgg(dm,m,t,ids), Wp=rangeAgg(dm,addDays(m,-7),addDays(t,-7),ids), Wf=rangeAgg(dm,addDays(m,-7),addDays(m,-1),ids);
+  var J7=rangeAgg(dm,addDays(t,-6),t,ids), J7p=rangeAgg(dm,addDays(t,-13),addDays(t,-7),ids);
+  var C={actifs:0,pause:0,renseignes:0};
+  ids.forEach(function(pid){var st=latestState(pid,dm,P.b);if(st){var c=comptes(st.boosts);C.actifs+=c.actifs;C.pause+=c.pause;C.renseignes+=c.renseignes}});
+  var wv=mv(W), wpv=mv(Wp), j7=mv(J7), j7p=mv(J7p), cd=diffOf(cur);
+  var evo=wv!=null&&wpv!=null?pct(wv,wpv):null;
+  var cards=
+    card('Messages boosts',cur.nB?nf(cur.b):'—',pl)+
+    card('Messages réels',cur.nR?nf(cur.r):'—',pl+(cur.nR?' · '+cur.nR+' saisie'+(cur.nR>1?'s':''):''))+
+    card('Différence',cd==null?'—':delta(cd,{plain:true}),'boosts − réels')+
+    card('Total 7 derniers jours',nf(j7),j7!=null&&j7p!=null?delta(j7-j7p,{pct:pct(j7,j7p)})+' <span class="muted">vs 7 j préc.</span>':'<span class="muted">'+mLabel()+'</span>')+
+    card('Total cette semaine',nf(wv),'<span class="muted">lun.–'+JC[el-1].toLowerCase()+'. · '+mLabel()+'</span>')+
+    card('Évolution',evo==null?'—':pctBadge(evo),'<span class="muted">vs semaine préc. (mêmes jours)</span>')+
+    card('Comptes Boost',C.renseignes?'<span class="okc">'+C.actifs+'</span><span class="muted" style="font-weight:600">/'+C.renseignes+'</span>':'—','<span class="chip ok">'+C.actifs+' actif'+(C.actifs>1?'s':'')+'</span> <span class="chip todo">'+C.pause+' en pause</span>');
+  /* Tableau par page */
+  var tot={b:0,r:0,nB:0,nR:0,nBR:0,bBR:0,rBR:0,j7:0,w:0,wp:0,c:{actifs:0,pause:0,renseignes:0}};
   var rows=ids.map(function(pid){
-    var p=S.pages[pid], st=latestState(pid,dm), d=dm[pid]||{};
-    var e0=d[t];
-    if(st){curA+=st.totaux.actifs}
-    if(e0){curB+=e0.totaux.messagesBoosts;if(e0.totaux.reels!=null){curR+=e0.totaux.reels;hasR=true}}
-    /* 3 derniers jours saisis pour cette page (aujourd'hui, J-1, J-2 quand la saisie est à jour) */
-    var ks=Object.keys(d).filter(function(x){return x<=t}).sort().slice(-3), L3=ks.map(function(k){return d[k]});
-    while(L3.length<3){L3.unshift(null);ks.unshift(null)}
-    var la=L3[2], v0=la?la.totaux.reels:null, v1=L3[1]?L3[1].totaux.reels:null, v2=L3[0]?L3[0].totaux.reels:null;
-    var ev=v0!=null&&v1!=null?v0-v1:null;
-    var dl=function(k){return k?'<span class="muted" style="display:block;font-size:.7rem;font-weight:400">'+(k===t?'auj.':k===y?'hier':short(k))+'</span>':''};
-    if(ev!=null){if(!best||ev>best.v)best={pid:pid,v:ev};if(!worst||ev<worst.v)worst={pid:pid,v:ev}}
-    var ecart=la?la.totaux.ecart:null;
-    var hasWeek=Object.keys(d).some(function(x){return weekKey(x)===wk});
-    return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(p.nom)+'</strong></td><td>'+esc(memberName(p.responsable))+'</td>'+
-      '<td class="n">'+(st?st.totaux.actifs:'—')+'<span class="muted" style="font-weight:400"> /'+(st?st.totaux.total:'—')+'</span></td>'+
-      '<td class="n">'+(la?nf(la.totaux.messagesBoosts):'—')+dl(ks[2])+'</td><td class="n">'+nf(v0)+dl(ks[2])+'</td><td>'+delta(ecart)+'</td>'+
-      '<td class="n muted">'+nf(v2)+dl(ks[0])+'</td><td class="n muted">'+nf(v1)+dl(ks[1])+'</td><td class="n"><strong>'+nf(v0)+'</strong>'+dl(ks[2])+'</td>'+
-      '<td>'+delta(ev,{pct:pct(v0,v1)})+'</td><td>'+statusChip(weekStatus(pid,wk),hasWeek)+'</td></tr>';
+    var p=S.pages[pid], st=latestState(pid,dm,P.b), c=st?comptes(st.boosts):null, x=cur.pages[pid];
+    var a7=mv(J7.pages[pid]), aw=mv(W.pages[pid]), awp=mv(Wp.pages[pid]), dfx=diffOf(x);
+    ['b','r','nB','nR','nBR','bBR','rBR'].forEach(function(k){tot[k]+=x[k]});
+    tot.j7+=a7||0; tot.w+=aw||0; tot.wp+=awp||0;
+    if(c){tot.c.actifs+=c.actifs;tot.c.pause+=c.pause;tot.c.renseignes+=c.renseignes}
+    var hasWeek=Object.keys(dm[pid]||{}).some(function(x){return weekKey(x)===wk});
+    return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(p.nom)+'</strong></td><td>'+(p.responsable?esc(memberName(p.responsable)):'<span class="muted">—</span>')+'</td>'+
+      '<td>'+comptesHtml(c)+'</td><td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nf(x.r):'—')+'</td><td>'+delta(dfx)+'</td>'+
+      '<td class="n">'+nf(a7)+'</td><td class="n">'+nf(aw)+'</td><td class="n muted">'+nf(awp)+'</td>'+
+      '<td>'+(aw!=null&&awp!=null?delta(aw-awp,{pct:pct(aw,awp)}):'<span class="muted">—</span>')+'</td><td>'+statusChip(weekStatus(pid,wk),hasWeek)+'</td></tr>';
   }).join('');
-  var mon=monday(t), el=Math.round((parse(t)-parse(mon))/864e5), cw=sumRange(dm,mon,t), pw=sumRange(dm,addDays(mon,-7),addDays(t,-7));
-  var wd=cw&&pw?cw.reels-pw.reels:null;
-  var tiles=
-    tile('Boosts actifs',curA,'<span class="muted">sur '+ids.length+' page'+(ids.length>1?'s':'')+'</span>')+
-    tile('Messages boosts',e0n(curB),'<span class="muted">aujourd\'hui</span>')+
-    tile('Messages réels',hasR?nf(curR):'—','<span class="muted">aujourd\'hui</span>')+
-    tile('Écart',hasR?delta(curR-curB,{plain:true}):'—','<span class="muted">réels − boosts</span>')+
-    tile('Semaine en cours',cw?nf(cw.reels):'—',delta(wd,{pct:cw&&pw?pct(cw.reels,pw.reels):null})+' <span class="muted" style="font-size:.75rem">vs '+(el?'lun.–'+JC[el].toLowerCase()+'.':'lundi')+' préc.</span>')+
-    tile('Pages',best?'<span style="font-size:1rem">'+esc(S.pages[best.pid].nom)+' '+delta(best.v,{plain:true})+'</span>':'—',worst&&worst.v<0?'À vérifier : '+esc(S.pages[worst.pid].nom)+' '+delta(worst.v,{plain:true}):'<span class="muted">meilleure progression</span>');
-  return '<div style="display:grid;gap:18px">'+
-    '<div class="tiles">'+tiles+'</div>'+
-    '<section class="panel"><div class="ph"><h2>Pages · 3 derniers jours saisis</h2><span class="label">'+dayName(t)+' '+short(t)+' · '+wk.replace('-S',' · S')+'</span></div>'+
-    '<div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th class="n">Boosts actifs</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th><th class="n">Jour 1</th><th class="n">Jour 2</th><th class="n">Dernier jour</th><th>Évolution</th><th>Statut semaine</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
-    '<div class="grid2">'+threeDays(dm)+chart14(dm)+'</div></div>';
+  rows+='<tr class="tot"><td><strong>TOTAL</strong></td><td class="muted">'+ids.length+' pages</td><td>'+comptesHtml(tot.c)+'</td><td class="n">'+(tot.nB?nf(tot.b):'—')+'</td><td class="n">'+(tot.nR?nf(tot.r):'—')+'</td><td>'+delta(tot.nBR?tot.bBR-tot.rBR:null)+'</td>'+
+    '<td class="n">'+nf(tot.j7)+'</td><td class="n">'+nf(tot.w)+'</td><td class="n muted">'+nf(tot.wp)+'</td><td>'+delta(tot.w-tot.wp,{pct:pct(tot.w,tot.wp)})+'</td><td></td></tr>';
+  var table='<section class="panel"><div class="ph"><h2>Messages par page</h2><span class="label">Période : '+esc(pl)+' · colonnes semaine en '+mLabel()+'</span></div>'+
+    '<div class="tablebox"><table><thead><tr><th>Page</th><th>Employé</th><th>Comptes Boost</th><th class="n">Msg boosts</th><th class="n">Message réel</th><th>Différence</th><th class="n">7 derniers jours</th><th class="n">Cette semaine</th><th class="n">Sem. préc.*</th><th>Évolution</th><th>Validation</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="muted" style="font-size:.8rem">* Semaine précédente sur les mêmes jours (lun.–'+JC[el-1].toLowerCase()+'.), pour comparer à égalité. Différence = messages boosts − messages réels, sur les jours où les deux sont saisis.</div></section>';
+  return '<div style="display:grid;gap:18px">'+periodBar('d')+
+    '<div class="cards">'+cards+'</div>'+alertsPanel(dm)+
+    '<div class="grid2">'+weekPanel(W,Wp,Wf,m,t,el)+sevenPanel(dm,ids)+'</div>'+
+    compPanel(dm,ids,P)+table+threeDays(dm)+'</div>';
 }
-function sumRange(dm,a,b){var r={reels:0,boosts:0},n=0;for(var d=a;d<=b;d=addDays(d,1)){var x=dayTotal(dm,d,'all');if(x){n++;r.reels+=x.reels;r.boosts+=x.boosts}}return n?r:null}
-function e0n(v){return nf(v)}
-function tile(l,v,s){return '<div class="tile"><span class="label">'+l+'</span><span class="v">'+v+'</span><span class="s">'+(s||'')+'</span></div>'}
+function card(l,v,s){return '<div class="card"><span class="label">'+l+'</span><span class="v">'+v+'</span><span class="s">'+(s||'')+'</span></div>'}
+function pctBadge(p){if(p==null||!isFinite(p))return '—';var c=p>0.05?'up':p<-0.05?'down':'flat';return '<span class="d '+c+' plain">'+(c==='up'?'↑ +':c==='down'?'↓ −':'→ ')+Math.abs(p).toFixed(2).replace('.',',')+' %</span>'}
+/* Barre de période : jours de la semaine + raccourcis + mesure */
+function periodBar(w){
+  var t=today(), m=monday(t), days='', isD=w==='d', type=isD?S.dp:S.rp, day=isD?(S.dDay||t):null;
+  if(isD){for(var i=0;i<7;i++){var d=addDays(m,i),fut=d>t;days+='<button type="button" class="wd'+(type==='jour'&&day===d?' on':'')+(d===t?' tday':'')+'" data-dday="'+d+'"'+(fut?' disabled':'')+' aria-pressed="'+(type==='jour'&&day===d)+'"><span>'+JC[i]+'</span><b>'+d.slice(8)+'</b></button>'}}
+  var opts=isD?[['jour','Aujourd\'hui'],['7j','7 derniers jours'],['sem','Cette semaine'],['semp','Semaine précédente'],['perso','Personnalisée']]:PERIODES;
+  var chips=opts.map(function(o){var on=o[0]==='jour'&&isD?(type==='jour'&&day===t):type===o[0];return '<button type="button" data-'+(isD?'dp':'rp')+'="'+o[0]+'" aria-pressed="'+on+'">'+o[1].replace('Période personnalisée','Personnalisée')+'</button>'}).join('');
+  var P=periode(type,day,isD?S.pa:S.ra,isD?S.pb:S.rb);
+  var perso=type==='perso'?'<span class="row" style="gap:6px"><input type="date" id="'+w+'A" value="'+P.a+'" max="'+t+'" aria-label="Du"><span class="muted">au</span><input type="date" id="'+w+'B" value="'+P.b+'" max="'+t+'" aria-label="Au"></span>':'';
+  var mes='<div class="seg" role="group" aria-label="Compter"><button type="button" data-mesure="b" aria-pressed="'+(S.mesure!=='r')+'">Msg boosts</button><button type="button" data-mesure="r" aria-pressed="'+(S.mesure==='r')+'">Msg réels</button></div>';
+  return '<section class="pbar">'+(isD?'<div class="week" role="group" aria-label="Jours de la semaine">'+days+'</div>':'')+
+    '<div class="row" style="justify-content:space-between"><div class="row"><div class="chips" role="group" aria-label="Période">'+chips+'</div>'+perso+'</div><div class="row"><span class="label">Totaux en</span>'+mes+'</div></div></section>';
+}
+/* Alertes : saisie manquante (aujourd'hui, hier) et baisse ≥ 20 % sur 7 jours */
+function alertList(dm){
+  var t=today(), y=addDays(t,-1), out=[], sans=0;
+  pageIds().forEach(function(pid){
+    var p=S.pages[pid], d=dm[pid]||{};
+    if(!p.responsable){sans++;return}
+    [t,y].forEach(function(day){var c=d[day];if(!c||c.totaux.reels==null)out.push({o:day===t?1:2,s:0,h:'<b>'+esc(memberName(p.responsable))+'</b> — Message réel non renseigné '+(day===t?'aujourd\'hui':'hier')+' — <b>'+esc(p.nom)+'</b> <span class="muted">· '+dayName(day)+' '+short(day)+'</span>'})});
+  });
+  pageIds().forEach(function(pid){
+    var a=rangeAgg(dm,addDays(t,-6),t,[pid]), b=rangeAgg(dm,addDays(t,-13),addDays(t,-7),[pid]);
+    var va=mv(a)||0, vb=mv(b);
+    if(vb!=null&&vb>=10){var p=pct(va,vb);if(p<=-20)out.push({o:3,s:p,h:'<b>'+esc(S.pages[pid].nom)+'</b> : '+(va?'baisse de '+Math.round(Math.abs(p))+' % des '+mLabel():'aucun '+mLabel().replace('messages','message')+' depuis 7 jours')+' <span class="muted">· 7 derniers jours '+nf(va)+' contre '+nf(vb)+' les 7 jours d\'avant</span>'})}
+  });
+  out.sort(function(a,b){return a.o-b.o||a.s-b.s});
+  return {list:out,sans:sans};
+}
+function alertsPanel(dm){
+  var A=alertList(dm), L=A.list, li=function(x){return '<li><span aria-hidden="true">🔴</span><span>'+x.h+'</span></li>'};
+  var body=L.length?'<ul class="alerts">'+L.slice(0,8).map(li).join('')+'</ul>'+(L.length>8?'<details><summary>Voir les '+(L.length-8)+' autres alertes</summary><ul class="alerts">'+L.slice(8).map(li).join('')+'</ul></details>':''):'<div class="okline">✓ Aucune alerte : toutes les saisies attendues sont faites et aucune baisse importante.</div>';
+  var sans=A.sans?'<div class="row muted" style="font-size:.85rem;gap:8px">'+A.sans+' page'+(A.sans>1?'s n\'ont':' n\'a')+' pas d\'employé : leurs saisies manquantes ne sont pas suivies.<button class="small" type="button" data-tab="equipe">Attribuer</button></div>':'';
+  return '<section class="panel'+(L.length?' alertp':'')+'"><div class="ph"><h2>Alertes'+(L.length?' <span class="chip todo">'+L.length+'</span>':'')+'</h2><span class="label">Mises à jour automatiquement</span></div>'+body+sans+'</section>';
+}
+function weekPanel(W,Wp,Wf,m,t,el){
+  var a=mv(W), b=mv(Wp), d=a!=null&&b!=null?a-b:null, p=d!=null?pct(a,b):null;
+  var lab=[],cur=[],prev=[];
+  for(var i=0;i<7;i++){var dc=addDays(m,i),dp=addDays(m,i-7),xc=W.days[dc],xp=Wf.days[dp];lab.push(JC[i]);cur.push(dc>t?null:mv(xc));prev.push(mv(xp))}
+  return '<section class="panel chart"><div class="ph"><h2>Cette semaine vs semaine précédente</h2><span class="label">'+mLabel()+'</span></div>'+
+    '<div class="wcmp"><div><span class="label">Cette semaine</span><span class="v">'+nf(a)+'</span></div><div><span class="label">Sem. préc. (mêmes jours)</span><span class="v muted">'+nf(b)+'</span></div><div><span class="label">Différence</span><span class="v">'+delta(d,{plain:true})+'</span></div><div><span class="label">Évolution</span><span class="v">'+pctBadge(p)+'</span></div></div>'+
+    barChart(lab,[{n:'Semaine précédente',c:'var(--s0)',v:prev},{n:'Cette semaine',c:'var(--s1)',v:cur}])+
+    '<div class="muted" style="font-size:.8rem">Semaine précédente complète : '+nf(mv(Wf))+' '+mLabel()+'.</div></section>';
+}
+function sevenPanel(dm,ids){
+  var t=today(), lab=[], vals=[], list='';
+  for(var i=6;i>=0;i--){var d=addDays(t,-i),x=rangeAgg(dm,d,d,ids),v=mv(x);lab.push(short(d));vals.push(v)}
+  vals.forEach(function(v,i){var p=i?vals[i-1]:null;list+='<div class="dl"><span class="label">'+JC[(parse(addDays(t,i-6)).getDay()+6)%7]+' '+lab[i]+'</span><b class="num">'+nf(v)+'</b>'+(i&&v!=null&&p!=null?delta(v-p):'<span></span>')+'</div>'});
+  var tr=trend(vals);
+  return '<section class="panel chart"><div class="ph"><h2>7 derniers jours</h2><span class="d '+tr.c+'">'+tr.t+'</span></div><div class="days7">'+list+'</div>'+lineChart(lab,vals,'var(--s1)',mLabel())+'</section>';
+}
+/* Tendance : pente de la droite des moindres carrés rapportée à la moyenne */
+function trend(vals){
+  var pts=vals.map(function(v,i){return [i,v]}).filter(function(p){return p[1]!=null});
+  if(pts.length<2)return {c:'flat',t:'→ pas assez de données'};
+  var n=pts.length,sx=0,sy=0,sxy=0,sxx=0;pts.forEach(function(p){sx+=p[0];sy+=p[1];sxy+=p[0]*p[1];sxx+=p[0]*p[0]});
+  var k=(n*sxy-sx*sy)/(n*sxx-sx*sx||1), mean=sy/n, rel=mean?k*6/mean:0;
+  return rel>0.05?{c:'up',t:'↑ en hausse'}:rel<-0.05?{c:'down',t:'↓ en baisse'}:{c:'flat',t:'→ stable'};
+}
+function compPanel(dm,ids,P,f){
+  var a=P.a; if(nDays(P)<2)a=addDays(P.b,-13);
+  var lab=[],bs=[],rs=[];
+  for(var d=a;d<=P.b;d=addDays(d,1)){var x=rangeAgg(dm,d,d,ids,f);lab.push(short(d));bs.push(x.nB?x.b:null);rs.push(x.nR?x.r:null)}
+  return '<section class="panel chart"><div class="ph"><h2>Messages boosts vs messages réels</h2><span class="label">'+short(a)+' – '+short(P.b)+'</span></div>'+
+    barChart(lab,[{n:'Messages boosts',c:'var(--s1)',v:bs},{n:'Messages réels',c:'var(--s2)',v:rs}],{W:1180,H:280})+'</section>';
+}
+/* Graphiques SVG : barres groupées et courbe, une seule échelle, survol = valeur exacte */
+function niceMax(v){v=Math.max(v,5);var p=Math.pow(10,Math.floor(Math.log10(v))),s=v/p;return (s<=1?1:s<=2?2:s<=5?5:10)*p}
+function axis(svg,max,W,L,sc){var st=max/4;for(var k=0;k<=max+1e-9;k+=st){var yy=sc(k);svg.push('<line x1="'+L+'" x2="'+(W-4)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(yy+3.5)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--mono)">'+nf(k)+'</text>')}}
+function barChart(lab,series,o){
+  o=o||{}; var W=o.W||640,H=o.H||230,L=44,B=24,T=10,n=lab.length,gw=(W-L-8)/n,ns=series.length,bw=Math.max(3,Math.min(26,(gw*0.78-2*(ns-1))/ns));
+  var mx=0;series.forEach(function(s){s.v.forEach(function(v){if(v!=null)mx=Math.max(mx,v)})});
+  var max=niceMax(mx), sc=function(v){return T+(H-T-B)*(1-v/max)}, svg=['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(series.map(function(s){return s.n}).join(' et '))+'">'];
+  axis(svg,max,W,L,sc);
+  var every=Math.ceil(n/10);
+  lab.forEach(function(l,i){
+    var x0=L+i*gw+(gw-(bw*ns+2*(ns-1)))/2, tip=l+' · '+series.map(function(s){return s.n+' '+nf(s.v[i])}).join(' · ');
+    svg.push('<g><title>'+esc(tip)+'</title><rect x="'+(L+i*gw)+'" y="'+T+'" width="'+gw+'" height="'+(H-T-B)+'" fill="transparent"/>');
+    series.forEach(function(s,j){var v=s.v[i];if(v==null||v<=0)return;var x=x0+j*(bw+2),y=sc(v),h=H-B-y,r=Math.min(4,bw/2,h);
+      svg.push('<path d="M'+x+','+(H-B)+'V'+(y+r)+'Q'+x+','+y+' '+(x+r)+','+y+'H'+(x+bw-r)+'Q'+(x+bw)+','+y+' '+(x+bw)+','+(y+r)+'V'+(H-B)+'Z" fill="'+s.c+'"/>')});
+    svg.push('</g>');
+    if(i%every===0||i===n-1)svg.push('<text x="'+(L+i*gw+gw/2)+'" y="'+(H-7)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--mono)">'+esc(l)+'</text>');
+  });
+  svg.push('<line x1="'+L+'" x2="'+(W-4)+'" y1="'+(H-B)+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-width="1"/></svg>');
+  return '<div class="legend">'+series.map(function(s){return '<span><i style="background:'+s.c+'"></i>'+esc(s.n)+'</span>'}).join('')+'</div>'+svg.join('');
+}
+function lineChart(lab,vals,color,name){
+  var W=640,H=190,L=44,B=24,T=16,n=lab.length,gw=(W-L-40)/Math.max(1,n-1);
+  var mx=0;vals.forEach(function(v){if(v!=null)mx=Math.max(mx,v)});
+  var max=niceMax(mx), sc=function(v){return T+(H-T-B)*(1-v/max)}, X=function(i){return L+8+i*gw}, svg=['<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(name)+' des 7 derniers jours">'];
+  axis(svg,max,W,L,sc);
+  var d='',pen=false;vals.forEach(function(v,i){if(v==null){pen=false;return}d+=(pen?'L':'M')+X(i)+','+sc(v);pen=true});
+  svg.push('<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>');
+  vals.forEach(function(v,i){
+    svg.push('<text x="'+X(i)+'" y="'+(H-7)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--mono)">'+esc(lab[i])+'</text>');
+    if(v==null)return;
+    svg.push('<g><title>'+esc(lab[i]+' · '+nf(v)+' '+name)+'</title><circle cx="'+X(i)+'" cy="'+sc(v)+'" r="12" fill="transparent"/><circle cx="'+X(i)+'" cy="'+sc(v)+'" r="4.5" fill="'+color+'" stroke="var(--surface)" stroke-width="2"/></g>');
+    if(i===n-1)svg.push('<text x="'+(X(i)+8)+'" y="'+(sc(v)-10)+'" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink)" font-family="var(--mono)">'+nf(v)+'</text>');
+  });
+  svg.push('<line x1="'+L+'" x2="'+(W-4)+'" y1="'+(H-B)+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-width="1"/></svg>');
+  return svg.join('');
+}
 function emptyStart(){
   return '<section class="panel"><h2>Commence par créer tes pages</h2><p class="muted" style="margin:0">Ajoute tes pages et attribue-les à tes employés dans l\'onglet Pages et équipe.</p><div class="row"><button class="primary" type="button" data-tab="equipe">Créer une page</button><button type="button" id="demoOn">Voir avec des exemples</button></div></section>';
 }
@@ -341,48 +559,72 @@ function threeDays(dm){
   return '<section class="panel"><div class="ph"><h2>3 jours consécutifs</h2><div class="row">'+pageSelect('threePage',f,true)+'<input type="date" id="threeRef" value="'+ref+'" aria-label="Dernier jour"></div></div>'+
     '<div class="three">'+cells+'<div class="day total"><span class="label">Évolution 3 jours</span><span class="big">'+delta(g,{plain:true})+'</span><span>'+(g!=null?delta(g,{noNum:true,pct:pct(v[2].reels,v[0].reels)}):'')+'</span><span class="muted" style="font-size:.8rem">messages réels</span></div></div></section>';
 }
-function chart14(dm){
-  var t=today(), days=[]; for(var i=13;i>=0;i--)days.push(addDays(t,-i));
-  var vals=days.map(function(d){return dayTotal(dm,d,S.page)});
-  var max=Math.max(10,Math.max.apply(null,vals.map(function(v){return v?Math.max(v.reels,v.boosts):0})));
-  var W=560,H=210,L=40,B=26,T=10,bw=(W-L-8)/14, gw=bw*0.72, sc=function(x){return T+(H-T-B)*(1-x/max)};
-  var nice=Math.pow(10,Math.floor(Math.log10(max))), step=max/nice>5?nice*2:max/nice>2?nice:nice/2, ticks=[];
-  for(var k=0;k<=max;k+=step)ticks.push(k);
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Messages réels et messages boosts des 14 derniers jours">';
-  ticks.forEach(function(k){var yy=sc(k);svg+='<line x1="'+L+'" x2="'+(W-4)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(yy+4)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--mono)">'+nf(k)+'</text>'});
-  days.forEach(function(d,i){
-    var v=vals[i], x=L+i*bw+(bw-gw)/2, w=(gw-2)/2;
-    if(v){
-      var h1=H-B-sc(v.reels), h2=H-B-sc(v.boosts);
-      svg+='<g><title>'+dayName(d)+' '+short(d)+' · réels '+nf(v.reels)+' · boosts '+nf(v.boosts)+'</title>'+
-        '<rect x="'+x+'" y="'+sc(v.reels)+'" width="'+w+'" height="'+Math.max(0,h1)+'" rx="2" fill="var(--s1)"/>'+
-        '<rect x="'+(x+w+2)+'" y="'+sc(v.boosts)+'" width="'+w+'" height="'+Math.max(0,h2)+'" rx="2" fill="var(--s2)"/>'+
-        '<rect x="'+(L+i*bw)+'" y="'+T+'" width="'+bw+'" height="'+(H-T-B)+'" fill="transparent"/></g>';
-    }
-    if(i%2===1||i===13)svg+='<text x="'+(L+i*bw+bw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--mono)">'+short(d)+'</text>';
-  });
-  svg+='<line x1="'+L+'" x2="'+(W-4)+'" y1="'+(H-B)+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-width="1"/></svg>';
-  return '<section class="panel chart"><div class="ph"><h2>14 derniers jours</h2><div class="legend"><span><i style="background:var(--s1)"></i>Messages réels</span><span><i style="background:var(--s2)"></i>Messages boosts</span></div></div>'+svg+'</section>';
-}
 
 function viewRecap(){
-  var dm=dayMap(), g=S.gran, t=today(), N=g==='jour'?14:g==='semaine'?12:g==='mois'?12:5, list=[];
+  var dm=dayMap(), f={page:S.page,emp:S.rEmp||'',boost:S.rBoost||'',statut:S.rStat||''};
+  var P=periode(S.rp,null,S.ra,S.rb), PP=prevRange(P), ids=inPages(f), pl=rangeLabel(P);
+  var cur=rangeAgg(dm,P.a,P.b,ids,f), prv=rangeAgg(dm,PP.a,PP.b,ids,f);
+  var a=mv(cur), b=mv(prv), C={actifs:0,pause:0,renseignes:0};
+  ids.forEach(function(pid){var st=latestState(pid,dm,P.b);if(!st)return;var bs=st.boosts.filter(function(x){return(!f.boost||x.nom===f.boost)&&(!f.statut||x.statut===f.statut)});var c=comptes(bs);C.actifs+=c.actifs;C.pause+=c.pause;C.renseignes+=c.renseignes});
+  /* Options des filtres */
+  var mids=Object.keys(S.membres), bnames={};
+  pageIds(S.page).forEach(function(pid){var st=latestState(pid,dm);(st?st.boosts:[]).forEach(function(x){if(!stInfo(x.statut).hors)bnames[x.nom]=1})});
+  var bl=Object.keys(bnames).sort(function(x,y){return x.localeCompare(y,'fr',{numeric:true})});
+  var sel=function(id,lab,opts,val){return '<label class="fl"><span class="label">'+lab+'</span><select id="'+id+'">'+opts.map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===val?' selected':'')+'>'+esc(o[1])+'</option>'}).join('')+'</select></label>'};
+  var filters='<div class="filters">'+
+    sel('rEmp','Employé',[['','Tous les employés']].concat(mids.map(function(u){return [u,memberName(u)]})).concat([['_none','Pages sans employé']]),f.emp)+
+    '<label class="fl"><span class="label">Page</span>'+pageSelect('recapPage',S.page,true)+'</label>'+
+    sel('rBoost','Compte Boost',[['','Tous les comptes']].concat(bl.map(function(n){return [n,n]})),f.boost)+
+    sel('rStat','Statut',[['','Tous']].concat(Object.keys(STATUTS).filter(function(s){return !STATUTS[s].hors}).map(function(s){return [s,STATUTS[s].l]})),f.statut)+
+    (f.emp||S.page!=='all'||f.boost||f.statut?'<button class="small" type="button" id="rReset">Effacer les filtres</button>':'')+'</div>';
+  var cd=diffOf(cur);
+  var cards='<div class="cards">'+
+    card('Messages boosts',cur.nB?nf(cur.b):'—',pl)+
+    card('Messages réels',cur.nR?nf(cur.r):'—',pl)+
+    card('Différence',cd==null?'—':delta(cd,{plain:true}),'boosts − réels')+
+    card('Période précédente',nf(b),'<span class="muted">'+short(PP.a)+' – '+short(PP.b)+' · '+mLabel()+'</span>')+
+    card('Évolution',a!=null&&b!=null?pctBadge(pct(a,b)):'—',a!=null&&b!=null?delta(a-b)+' <span class="muted">'+mLabel()+'</span>':'')+
+    card('Comptes Boost',C.renseignes?'<span class="okc">'+C.actifs+'</span><span class="muted" style="font-weight:600">/'+C.renseignes+'</span>':'—','<span class="chip ok">'+C.actifs+' actif'+(C.actifs>1?'s':'')+'</span> <span class="chip todo">'+C.pause+' en pause</span>')+'</div>';
+  /* Par page */
+  var T={b:0,r:0,nB:0,nR:0,nBR:0,bBR:0,rBR:0,p:0};
+  var prow=ids.map(function(pid){
+    var x=cur.pages[pid], y=prv.pages[pid], vx=mv(x), vy=mv(y), st=latestState(pid,dm,P.b);
+    ['b','r','nB','nR','nBR','bBR','rBR'].forEach(function(k){T[k]+=x[k]}); T.p+=vy||0;
+    if(!x.nB&&!x.nR&&vy==null)return '';
+    return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td>'+comptesHtml(st?comptes(st.boosts):null)+'</td>'+
+      '<td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nf(x.r):'—')+'</td><td>'+delta(diffOf(x))+'</td><td class="n muted">'+nf(vy)+'</td><td>'+(vx!=null&&vy!=null?delta(vx-vy,{pct:pct(vx,vy)}):'<span class="muted">—</span>')+'</td></tr>';
+  }).join('');
+  var vT=S.mesure==='r'?T.r:T.b;
+  prow=(prow||'<tr><td colspan="8" class="empty">Aucune donnée pour ces filtres.</td></tr>')+'<tr class="tot"><td><strong>TOTAL</strong></td><td></td><td></td><td class="n">'+(T.nB?nf(T.b):'—')+'</td><td class="n">'+(T.nR?nf(T.r):'—')+'</td><td>'+delta(T.nBR?T.bBR-T.rBR:null)+'</td><td class="n muted">'+nf(T.p)+'</td><td>'+delta(vT-T.p,{pct:pct(vT,T.p)})+'</td></tr>';
+  /* Par employé */
+  var emps={}; ids.forEach(function(pid){var u=S.pages[pid].responsable||'_none';(emps[u]=emps[u]||[]).push(pid)});
+  var erow=Object.keys(emps).map(function(u){
+    var x=rangeAgg(dm,P.a,P.b,emps[u],f), y=rangeAgg(dm,PP.a,PP.b,emps[u],f), vx=mv(x), vy=mv(y);
+    return '<tr><td><strong>'+(u==='_none'?'<span class="muted">Sans employé</span>':esc(memberName(u)))+'</strong></td><td class="n">'+emps[u].length+'</td><td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nf(x.r):'—')+'</td><td>'+delta(diffOf(x))+'</td><td>'+(vx!=null&&vy!=null?delta(vx-vy,{pct:pct(vx,vy)}):'<span class="muted">—</span>')+'</td></tr>';
+  }).join('');
+  /* Par jour */
+  var drow='',prevV=null;
+  for(var d=P.a;d<=P.b;d=addDays(d,1)){var x=cur.days[d]||{b:0,r:0,nB:0,nR:0,nBR:0},v=mv(x);drow='<tr><td>'+dayName(d)+' '+short(d)+'</td><td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nf(x.r):'—')+'</td><td>'+delta(diffOf(x))+'</td><td>'+(v!=null&&prevV!=null?delta(v-prevV,{pct:pct(v,prevV)}):'<span class="muted">—</span>')+'</td></tr>'+drow;prevV=v}
+  var note=f.boost||f.statut?'<div class="muted" style="font-size:.82rem">Le filtre compte Boost / statut s\'applique aux messages boosts. Les messages réels sont comptés par page.</div>':'';
+  return '<div style="display:grid;gap:18px">'+periodBar('r')+'<section class="panel"><div class="ph"><h2>Récapitulatif · '+esc(pl)+'</h2><span class="label">'+short(P.a)+' – '+short(P.b)+'</span></div>'+filters+note+'</section>'+cards+
+    compPanel(dm,ids,P,f)+
+    '<section class="panel"><div class="ph"><h2>Par page</h2><span class="label">Évolution en '+mLabel()+' vs période précédente</span></div><div class="tablebox"><table><thead><tr><th>Page</th><th>Employé</th><th>Comptes Boost</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Différence</th><th class="n">Période préc.</th><th>Évolution</th></tr></thead><tbody>'+prow+'</tbody></table></div></section>'+
+    '<div class="grid2"><section class="panel"><h2>Par employé</h2><div class="tablebox"><table><thead><tr><th>Employé</th><th class="n">Pages</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Différence</th><th>Évolution</th></tr></thead><tbody>'+erow+'</tbody></table></div></section>'+
+    '<section class="panel"><h2>Par jour</h2><div class="tablebox" style="max-height:420px;overflow-y:auto"><table><thead><tr><th>Jour</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Différence</th><th>Vs veille</th></tr></thead><tbody>'+drow+'</tbody></table></div></section></div>'+
+    recapHistory(dm)+'</div>';
+}
+function recapHistory(dm){
+  var g=S.gran, t=today(), N=g==='jour'?14:g==='semaine'?12:g==='mois'?12:5, list=[];
   for(var i=0;i<=N;i++){var ref=pstep(t,g,-i);list.push({k:pkey(ref,g),ref:ref,a:aggregate(dm,pkey(ref,g),g,S.page)})}
-  var cur=list[0],prev=list[1];
-  var cmp=function(a,b,field){return a.a&&b.a?a.a[field]-b.a[field]:null};
-  var head='<div class="compare"><span class="label" style="width:100%">'+(g==='jour'?'Aujourd\'hui ↔ hier':g==='semaine'?'Semaine actuelle ↔ semaine précédente':g==='mois'?'Mois actuel ↔ mois précédent':'Année actuelle ↔ année précédente')+'</span>'+
-    '<span class="muted">'+esc(plabel(prev.k,g,prev.ref))+'</span><span class="vs num">'+(prev.a?nf(prev.a.reels):'—')+'</span><span>→</span>'+
-    '<span class="muted">'+esc(plabel(cur.k,g,cur.ref))+'</span><span class="vs num">'+(cur.a?nf(cur.a.reels):'—')+'</span>'+
-    delta(cmp(cur,prev,'reels'),{pct:cur.a&&prev.a?pct(cur.a.reels,prev.a.reels):null})+'</div>';
   var rows=list.slice(0,N).map(function(p,i){
     var o=list[i+1], a=p.a;
-    if(!a)return '<tr><td>'+esc(plabel(p.k,g,p.ref))+'</td><td colspan="8" class="muted">Aucune saisie</td></tr>';
-    return '<tr><td><strong>'+esc(plabel(p.k,g,p.ref))+'</strong></td><td class="n">'+nf(a.reels)+'</td><td class="n">'+nf(a.boosts)+'</td><td>'+delta(a.ecart)+'</td>'+
+    if(!a)return '<tr><td>'+esc(plabel(p.k,g,p.ref))+'</td><td colspan="7" class="muted">Aucune saisie</td></tr>';
+    return '<tr><td><strong>'+esc(plabel(p.k,g,p.ref))+'</strong></td><td class="n">'+nf(a.boosts)+'</td><td class="n">'+nf(a.reels)+'</td><td>'+delta(a.ecart)+'</td>'+
       '<td class="n">'+nf(a.nbBoosts)+'</td><td class="n">'+(a.moyActifs==null?'—':a.moyActifs.toFixed(1).replace('.',','))+'</td>'+
-      '<td>'+delta(o&&o.a?a.reels-o.a.reels:null,{pct:o&&o.a?pct(a.reels,o.a.reels):null})+'</td><td>'+delta(o&&o.a?a.boosts-o.a.boosts:null)+'</td></tr>';
+      '<td>'+delta(o&&o.a?a.boosts-o.a.boosts:null,{pct:o&&o.a?pct(a.boosts,o.a.boosts):null})+'</td><td>'+delta(o&&o.a?a.reels-o.a.reels:null,{pct:o&&o.a?pct(a.reels,o.a.reels):null})+'</td></tr>';
   }).join('');
-  return '<section class="panel"><div class="ph"><h2>Récapitulatifs</h2><div class="row">'+granSeg('gran',g)+pageSelect('recapPage',S.page,true)+'</div></div>'+head+
-    '<div class="tablebox"><table><thead><tr><th>Période</th><th class="n">Msg réels</th><th class="n">Msg boosts</th><th>Écart</th><th class="n">Nb boosts</th><th class="n">Moy. actifs/jour</th><th>Réels vs préc.</th><th>Boosts vs préc.</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+  return '<section class="panel"><div class="ph"><h2>Historique par jour, semaine, mois, année</h2><div class="row">'+granSeg('gran',g)+'</div></div>'+
+    '<div class="tablebox"><table><thead><tr><th>Période</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Différence</th><th class="n">Comptes renseignés</th><th class="n">Moy. actifs/jour</th><th>Boosts vs préc.</th><th>Réels vs préc.</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
 }
 function granSeg(name,val){
   return '<div class="seg" role="group" aria-label="Période">'+['jour','semaine','mois','annee'].map(function(x){var g=x==='annee'?'annee':x;return '<button type="button" data-'+name+'="'+g+'" aria-pressed="'+(val===g)+'">'+(x==='annee'?'Année':cap(x))+'</button>'}).join('')+'</div>';
@@ -402,12 +644,14 @@ function viewCal(){
   var g=S.histGran, k=pkey(sel,g);
   var es=allEntries().filter(function(e){return S.pages[e.pageId]&&pkey(e.date,g)===k&&(S.page==='all'||e.pageId===S.page)}).sort(function(a,b){return a.horodatage<b.horodatage?1:-1});
   var rows=es.map(function(e){
-    var t=e.totaux, lastOfDay=(dm[e.pageId]||{})[e.date]===e;
+    var t=e.totaux, c=(dm[e.pageId]||{})[e.date], used=c&&(c.reelEntry===e||c.entries.filter(function(x){return x.boosts&&x.boosts.length&&x.saisieCompteurs!==false}).pop()===e||c.entries.filter(function(x){return x.boosts&&x.boosts.length}).pop()===e);
+    var mb=e.saisieCompteurs===false?null:t.messagesBoosts, cp=comptes(e.boosts);
+    var chg=(e.changements||[]).map(function(x){return esc(x.nom)+' : '+(x.de?stInfo(x.de).l:'nouveau')+' → <span class="chip '+stInfo(x.a).c+'">'+stInfo(x.a).l+'</span>'}).join('<br>');
     return '<tr><td>'+cap(e.jour)+' '+short(e.date)+'</td><td class="num"><strong>'+e.heure+'</strong></td><td>'+esc(S.pages[e.pageId].nom)+'</td><td>'+esc(memberName(e.auteur))+'</td>'+
-      '<td class="n">'+t.actifs+'</td><td class="n">'+t.pause+'</td><td class="n">'+t.supprimes+'</td><td class="n">'+nf(t.messagesBoosts)+'</td><td class="n">'+nf(t.reels)+'</td><td>'+delta(t.ecart)+'</td><td>'+(lastOfDay?'<span class="chip ok">retenue</span>':'<span class="chip none">remplacée</span>')+'</td></tr>';
-  }).join('')||'<tr><td colspan="11" class="empty">Aucune saisie sur cette période.</td></tr>';
+      '<td>'+comptesHtml(cp)+'</td><td class="n">'+nf(mb)+'</td><td class="n">'+nf(t.reels)+'</td><td>'+delta(mb!=null&&t.reels!=null?mb-t.reels:null)+'</td><td style="white-space:normal;font-size:.85rem">'+(chg||'<span class="muted">—</span>')+'</td><td>'+(used?'<span class="chip ok">retenue</span>':'<span class="chip none">remplacée</span>')+'</td></tr>';
+  }).join('')||'<tr><td colspan="10" class="empty">Aucune saisie sur cette période.</td></tr>';
   var hist='<section class="panel"><div class="ph"><h2>Historique · '+esc(plabel(k,g,sel))+'</h2><div class="row">'+granSeg('hist',g)+pageSelect('calPage',S.page,true)+'</div></div>'+
-    '<div class="tablebox"><table><thead><tr><th>Jour</th><th>Heure</th><th>Page</th><th>Saisi par</th><th class="n">Actifs</th><th class="n">Pause</th><th class="n">Suppr.</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th><th>Valeur du jour</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="tablebox"><table><thead><tr><th>Jour</th><th>Heure</th><th>Page</th><th>Saisi par</th><th>Comptes Boost</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Différence</th><th>Changements de statut</th><th>Valeur du jour</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div class="muted" style="font-size:.82rem">Toutes les saisies sont conservées. La dernière saisie d\'un jour sert de valeur du jour.</div></section>';
   return '<div style="display:grid;gap:18px">'+cal+hist+'</div>';
 }
@@ -425,7 +669,7 @@ function viewValid(){
         '<td>'+(st==='valide'?'<button class="small" type="button" data-unvalid="'+w.k+'_'+pid+'">Annuler</button>':'<button class="small primary" type="button" data-valid="'+w.k+'_'+pid+'">Valider</button>')+'</td></tr>';
     }).join('');
     if(!rows)rows='<tr><td colspan="10" class="empty">Aucune saisie cette semaine.</td></tr>';
-    return '<section class="panel"><div class="ph"><h2>'+esc(plabel(w.k,'semaine',w.ref))+(wi===0?' · en cours':'')+'</h2></div><div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th class="n">Jours saisis</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th><th class="n">Nb boosts</th><th>Évolution vs sem. préc.</th><th>Statut</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+    return '<section class="panel"><div class="ph"><h2>'+esc(plabel(w.k,'semaine',w.ref))+(wi===0?' · en cours':'')+'</h2></div><div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th class="n">Jours saisis</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Différence</th><th class="n">Comptes</th><th>Évolution vs sem. préc.</th><th>Statut</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
   }).join('');
   return '<div style="display:grid;gap:18px">'+html+'</div>';
 }
@@ -528,67 +772,80 @@ function resolveNames(){
 var pending=false;
 function soft(){if(busyInput())pending=true;else render()}
 document.addEventListener('focusout',function(){setTimeout(function(){if(pending&&!busyInput()){pending=false;render()}},50)});
-function busyInput(){var a=document.activeElement;return a&&(a.tagName==='INPUT'||a.tagName==='SELECT')&&a.id!=='threeRef'}
+function busyInput(){var a=document.activeElement;return a&&(a.tagName==='INPUT'||a.tagName==='SELECT')&&!/^(threeRef|dA|dB|rA|rB)$/.test(a.id)}
 
 /* ---------- Espace de saisie ---------- */
 function myPages(isEmployee){
   return pageIds().filter(function(pid){return isEmployee?S.pages[pid].responsable===S.me:true});
 }
-function lastOwnEntry(pid){
-  var mine=(S.entries[S.me]||[]).filter(function(e){return e.pageId===pid}).sort(function(a,b){return a.horodatage<b.horodatage?1:-1});
-  if(mine[0])return mine[0];
-  if(S.owner){var dm=dayMap();return latestState(pid,dm)}
-  return null;
+/* Dernière liste de boosts connue de la page (compteurs + statuts), toutes saisies visibles confondues */
+function lastBoostEntry(pid){
+  var best=null;
+  allEntries().forEach(function(e){if(e.pageId===pid&&e.boosts&&e.boosts.length&&(!best||e.horodatage>best.horodatage))best=e});
+  return best;
 }
+function lastEntry(pid){var best=null;allEntries().forEach(function(e){if(e.pageId===pid&&(!best||e.horodatage>best.horodatage))best=e});return best}
+function statOf(e){var m={};(e?e.boosts:[]).forEach(function(b){m[b.id]=b.statut});return m}
 function draft(pid){
   if(!S.drafts[pid]){
-    var last=lastOwnEntry(pid);
-    S.drafts[pid]={boosts:last?last.boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}):[{id:uid(),nom:'Boost 1',statut:'actif',messages:''}],reels:'',base:baseOf(last)};
+    var last=lastBoostEntry(pid);
+    S.drafts[pid]={boosts:last?last.boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}):[],reels:'',base:baseOf(last),baseStat:statOf(last),cdirty:false,sdirty:false};
   }
   return S.drafts[pid];
 }
 function viewSaisie(isEmployee){
-  if(isEmployee&&!online())return '<section class="panel"><p class="empty">Ouvre le lien d\u2019accès que ton administrateur t\u2019a envoyé.</p></section>';
-  var ids=myPages(isEmployee);
+  if(isEmployee&&!online())return '<section class="panel"><p class="empty">Ouvre le lien d’accès que ton administrateur t’a envoyé.</p></section>';
+  var ids=myPages(isEmployee), dm=dayMap(), t=today();
   if(!ids.length)return '<section class="panel"><h2>Aucune page attribuée</h2><p class="muted" style="margin:0">'+(isEmployee?'Ton accès est enregistré. L\'administrateur doit maintenant t\'attribuer tes pages.':'Crée une page dans l\'onglet Pages et équipe.')+'</p></section>';
+  var done=ids.filter(function(pid){var c=(dm[pid]||{})[t];return c&&c.totaux.reels!=null}).length;
+  var head='<section class="panel"><div class="ph"><h2>'+(isEmployee?'Mes pages':'Saisie')+' · '+dayName(t)+' '+short(t)+'</h2><span class="chip '+(done===ids.length?'ok':'todo')+'">'+done+'/'+ids.length+' page'+(ids.length>1?'s':'')+' saisie'+(done>1?'s':'')+' aujourd\'hui</span></div>'+
+    '<div class="muted" style="font-size:.9rem">Pour chaque page : écris le <strong>message réel d\'aujourd\'hui</strong>, puis Enregistrer. La date, l\'heure et ton nom sont ajoutés tout seuls. Le logiciel calcule tous les totaux.</div></section>';
   var cards=ids.map(function(pid){
-    var d=draft(pid), t=totaux(d.boosts,d.reels,d.base), last=lastOwnEntry(pid);
+    var d=draft(pid), t2=totaux(d.boosts,d.reels,d.base), last=lastEntry(pid), c=comptes(d.boosts), today_=(dm[pid]||{})[t];
     var rows=d.boosts.map(function(b,i){
-      return '<div class="boost'+(b.statut==='supprime'?' del':'')+'"><input class="bn" id="bn_'+pid+'_'+b.id+'" data-b="'+pid+'|'+i+'|nom" value="'+esc(b.nom)+'" aria-label="Nom du boost">'+
-        '<select id="bs_'+pid+'_'+b.id+'" data-b="'+pid+'|'+i+'|statut" aria-label="Statut">'+Object.keys(STATUTS).map(function(s){return '<option value="'+s+'"'+(b.statut===s?' selected':'')+'>'+STATUTS[s]+'</option>'}).join('')+'</select>'+
+      return '<div class="boost'+(stInfo(b.statut).hors?' del':'')+'"><input class="bn" id="bn_'+pid+'_'+b.id+'" data-b="'+pid+'|'+i+'|nom" value="'+esc(b.nom)+'" aria-label="Nom du compte Boost">'+
+        '<select class="st-'+esc(b.statut)+'" id="bs_'+pid+'_'+b.id+'" data-b="'+pid+'|'+i+'|statut" aria-label="Statut">'+Object.keys(STATUTS).map(function(s){return '<option value="'+s+'"'+(b.statut===s?' selected':'')+'>'+STATUTS[s].l.toUpperCase()+'</option>'}).join('')+'</select>'+
         '<input id="bm_'+pid+'_'+b.id+'" type="number" min="0" step="1" inputmode="numeric" data-b="'+pid+'|'+i+'|messages" value="'+esc(b.messages)+'" placeholder="Compteur" aria-label="Compteur total du boost">'+
-        '<span class="nv num" id="nv_'+pid+'_'+i+'">'+nvHtml(b,d.base)+'</span>'+
+        '<span class="nv num" id="nv_'+pid+'_'+i+'">'+(d.cdirty?nvHtml(b,d.base):'<span class="muted">—</span>')+'</span>'+
         '<button class="link" type="button" data-rmb="'+pid+'|'+i+'" aria-label="Retirer la ligne">✕</button></div>';
     }).join('');
+    var already=today_&&today_.totaux.reels!=null?'<div class="okline">✓ Déjà saisi aujourd\'hui : <strong class="num">'+nf(today_.totaux.reels)+'</strong> à '+esc(today_.reelEntry.heure)+'. Une nouvelle saisie remplace ce chiffre (l\'ancienne reste dans l\'historique).</div>':'';
     return '<section class="panel pagecard" data-card="'+pid+'"><div class="ph"><h2>'+esc(S.pages[pid].nom)+'</h2><span class="label">'+(last?'Dernière saisie : '+cap(last.jour)+' '+short(last.date)+' à '+last.heure:'Aucune saisie')+'</span></div>'+
-      '<div class="reelbox"><label for="reels_'+pid+'"><span class="rt">Nombre réel de messages comptés</span><span class="muted" style="font-size:.85rem">Messages que tu as comptés toi-même sur la page</span></label><input id="reels_'+pid+'" type="number" min="0" step="1" inputmode="numeric" data-reels="'+pid+'" value="'+esc(d.reels)+'" placeholder="0" required></div>'+
-      '<div style="display:grid;gap:8px"><h3>Boosts de la page</h3><div class="boost label" style="font-size:.66rem"><span class="bn">Boost</span><span>Statut</span><span>Compteur total</span><span>Nouveaux</span><span></span></div>'+rows+
-      '<div><button class="small" type="button" data-addb="'+pid+'">+ Ajouter un boost</button></div></div>'+
-      '<div class="sumrow" id="sum_'+pid+'">'+sumHtml(t)+'</div>'+
-      '<div class="row"><button class="primary" type="button" data-save="'+pid+'">Enregistrer</button><span class="muted" style="font-size:.85rem">Date et heure ajoutées automatiquement.</span></div><div class="msg '+((S.msgs[pid]||{}).c||'')+'" role="status">'+((S.msgs[pid]||{}).t||'')+'</div></section>';
+      '<div class="reelbox"><label for="reels_'+pid+'"><span class="rt">Message réel aujourd\'hui</span><span class="muted" style="font-size:.85rem">Messages que tu as comptés toi-même sur la page</span></label>'+
+      '<div class="row"><input id="reels_'+pid+'" type="number" min="0" step="1" inputmode="numeric" data-reels="'+pid+'" value="'+esc(d.reels)+'" placeholder="0"><button class="primary big" type="button" data-save="'+pid+'">Enregistrer</button></div></div>'+already+
+      '<div class="msg '+((S.msgs[pid]||{}).c||'')+'" role="status">'+((S.msgs[pid]||{}).t||'')+'</div>'+
+      '<details class="boostbox" data-open="'+pid+'"'+(S.open[pid]?' open':'')+'><summary><span>Comptes Boost</span> '+comptesHtml(c,true)+'<span class="muted" style="font-size:.82rem;font-weight:500"> · statuts et compteurs (facultatif)</span></summary>'+
+      '<div style="display:grid;gap:8px;padding-top:10px">'+(rows?'<div class="boost label" style="font-size:.66rem"><span class="bn">Compte Boost</span><span>Statut</span><span>Compteur total</span><span>Nouveaux</span><span></span></div>'+rows:'<div class="muted">Aucun compte Boost pour cette page.</div>')+
+      '<div><button class="small" type="button" data-addb="'+pid+'">+ Ajouter un compte Boost</button></div>'+
+      '<div class="sumrow" id="sum_'+pid+'">'+sumHtml(t2,d)+'</div><div class="muted" style="font-size:.82rem">Change le statut (ACTIF ou PAUSE) ou les compteurs ici, puis Enregistrer. Les changements de statut sont gardés dans l\'historique.</div></div></details></section>';
   }).join('');
   var hist='';
   var mine=(S.entries[S.me]||[]).filter(function(e){return S.pages[e.pageId]}).sort(function(a,b){return a.horodatage<b.horodatage?1:-1}).slice(0,10);
   if(isEmployee&&mine.length){
-    hist='<section class="panel"><h2>Mes dernières saisies</h2><div class="tablebox"><table><thead><tr><th>Jour</th><th>Heure</th><th>Page</th><th class="n">Actifs</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th></tr></thead><tbody>'+
-      mine.map(function(e){return '<tr><td>'+cap(e.jour)+' '+short(e.date)+'</td><td class="num">'+e.heure+'</td><td>'+esc(S.pages[e.pageId].nom)+'</td><td class="n">'+e.totaux.actifs+'</td><td class="n">'+nf(e.totaux.messagesBoosts)+'</td><td class="n">'+nf(e.totaux.reels)+'</td><td>'+delta(e.totaux.ecart)+'</td></tr>'}).join('')+'</tbody></table></div></section>';
+    hist='<section class="panel"><h2>Mes dernières saisies</h2><div class="tablebox"><table><thead><tr><th>Jour</th><th>Heure</th><th>Page</th><th class="n">Message réel</th><th>Comptes Boost</th></tr></thead><tbody>'+
+      mine.map(function(e){return '<tr><td>'+cap(e.jour)+' '+short(e.date)+'</td><td class="num">'+e.heure+'</td><td>'+esc(S.pages[e.pageId].nom)+'</td><td class="n">'+nf(e.totaux.reels)+'</td><td>'+comptesHtml(comptes(e.boosts))+'</td></tr>'}).join('')+'</tbody></table></div></section>';
   }
-  return '<div style="display:grid;gap:18px">'+cards+hist+'</div>';
+  return '<div style="display:grid;gap:18px">'+head+cards+hist+'</div>';
 }
-function nvHtml(b,base){if(b.messages===''||b.statut==='supprime')return '<span class="muted">—</span>';if(base===null)return '<span class="muted" title="Premier relevé">1er</span>';var n=nouveaux(b,base);return '+'+nf(n)}
-function sumHtml(t){
-  return '<div><span class="label">Actifs</span><span class="v">'+t.actifs+'</span></div><div><span class="label">En pause</span><span class="v">'+t.pause+'</span></div><div><span class="label">Supprimés</span><span class="v">'+t.supprimes+'</span></div>'+
-    '<div><span class="label">Total boosts</span><span class="v">'+t.total+'</span></div><div><span class="label">Nouveaux msg boosts</span><span class="v">'+nf(t.messagesBoosts)+'</span></div><div><span class="label">Écart réels</span><span class="v">'+(t.reels==null?'—':delta(t.ecart,{plain:true}))+'</span></div>';
+function nvHtml(b,base){if(b.messages===''||stInfo(b.statut).hors)return '<span class="muted">—</span>';if(base===null)return '<span class="muted" title="Premier relevé">1er</span>';var n=nouveaux(b,base);return '+'+nf(n)}
+function sumHtml(t,d){
+  return '<div><span class="label">Actifs</span><span class="v okc">'+t.actifs+'</span></div><div><span class="label">En pause</span><span class="v downc">'+t.pause+'</span></div><div><span class="label">Renseignés</span><span class="v">'+t.renseignes+'</span></div>'+
+    '<div><span class="label">Supprimés</span><span class="v">'+t.supprimes+'</span></div><div><span class="label">Nouveaux msg boosts</span><span class="v">'+(d&&d.cdirty?nf(t.messagesBoosts):'—')+'</span></div><div><span class="label">Différence</span><span class="v">'+(d&&d.cdirty&&t.reels!=null?delta(t.ecart,{plain:true}):'—')+'</span></div>';
 }
 function saveEntry(pid){
-  var d=draft(pid);
-  if(d.reels===''||isNaN(+d.reels)){S.msgs[pid]={t:'Indique le nombre réel de messages comptés.',c:'err'};render();var ri=$('reels_'+pid);if(ri)ri.focus();return}
-  if(d.boosts.some(function(b){return b.messages===''||isNaN(+b.messages)||+b.messages<0})){S.msgs[pid]={t:'Indique le nombre de messages de chaque boost (0 si aucun).',c:'err'};render();return}
+  var d=draft(pid), hasR=d.reels!==''&&!isNaN(+d.reels)&&+d.reels>=0, dirty=d.cdirty||d.sdirty;
+  if(!hasR&&!dirty){S.msgs[pid]={t:'Écris le message réel d\'aujourd\'hui.',c:'err'};render();var ri=$('reels_'+pid);if(ri)ri.focus();return}
+  if(d.cdirty&&d.boosts.some(function(b){return b.messages===''||isNaN(+b.messages)||+b.messages<0})){S.msgs[pid]={t:'Indique le compteur de chaque compte Boost (0 si aucun).',c:'err'};S.open[pid]=true;render();return}
   var now=new Date();
-  var boosts=d.boosts.map(function(b){var x={id:b.id,nom:(b.nom||'').trim()||'Boost',statut:b.statut,messages:Math.round(+b.messages)};x.nouveaux=nouveaux(x,d.base);return x});
+  /* Saisie simple (message réel seul) : on n'enregistre pas de boosts, les statuts restent ceux de la dernière mise à jour */
+  var boosts=!dirty?[]:d.boosts.map(function(b){var x={id:b.id,nom:(b.nom||'').trim()||'Boost',statut:b.statut,messages:b.messages===''?(d.base&&d.base[b.id]||0):Math.round(+b.messages)};x.nouveaux=d.cdirty?nouveaux(x,d.base):0;return x});
+  var ch=[]; boosts.forEach(function(b){var o=d.baseStat[b.id];if(o&&o!==b.statut)ch.push({id:b.id,nom:b.nom,de:o,a:b.statut});if(!o&&d.base!==null&&d.boosts.length)ch.push({id:b.id,nom:b.nom,de:null,a:b.statut})});
   var e={pageId:pid,auteur:S.me||'demo',horodatage:now.toISOString(),date:ymd(now),jour:JOURS[now.getDay()],heure:pad(now.getHours())+':'+pad(now.getMinutes()),
-    boosts:boosts,mode:'cumul',totaux:totaux(boosts,Math.round(+d.reels),d.base)};
-  var done=function(saved){if(saved&&saved.heure)e=saved;if(S.mode==='sheets'){(S.entries[S.me]=S.entries[S.me]||[]).push(e)}S.drafts[pid]={boosts:boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}),reels:'',base:baseOf(e)};S.msgs[pid]={t:'✓ Enregistré '+e.jour+' '+short(e.date)+' à '+e.heure,c:'ok'};render()};
+    boosts:boosts,mode:'cumul',saisieCompteurs:!!d.cdirty,changements:ch,totaux:totaux(boosts,hasR?Math.round(+d.reels):null,d.base)};
+  if(!d.cdirty)e.totaux.messagesBoosts=0;
+  var done=function(saved){if(saved&&saved.heure)e=saved;if(S.mode==='sheets'){(S.entries[S.me]=S.entries[S.me]||[]).push(e)}
+    if(dirty)S.drafts[pid]={boosts:boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}),reels:'',base:baseOf(e),baseStat:statOf(e),cdirty:false,sdirty:false};else d.reels='';
+    S.msgs[pid]={t:'✓ Enregistré '+e.jour+' '+short(e.date)+' à '+e.heure+(hasR?' · message réel '+nf(e.totaux.reels):'')+(ch.length?' · '+ch.length+' statut'+(ch.length>1?'s':'')+' changé'+(ch.length>1?'s':''):''),c:'ok'};render()};
   if(!online()){e.id=uid();(S.entries[e.auteur]=S.entries[e.auteur]||[]).push(e);done();return}
   var btn=document.querySelector('[data-save="'+pid+'"]'); if(btn)btn.disabled=true;
   wAddEntry(e).then(done,function(err){S.msgs[pid]={t:err&&err.code==='quota_exceeded'?'Espace de stockage plein. Préviens l\'administrateur.':S.mode==='sheets'?'Enregistrement impossible ('+(err&&err.message||'connexion')+'). Réessaie.':'Enregistrement refusé. Vérifie que l\'administrateur t\'a donné l\'accès en modification.',c:'err'};render()});
@@ -603,13 +860,18 @@ document.addEventListener('click',function(ev){
   if(b.id==='demoOff'){stopDemo();return}
   if(ds.gotoPage){S.page=ds.gotoPage;S.tab='recap';render();return}
   if(ds.gran){S.gran=ds.gran;render();return}
+  if(ds.dday){S.dp='jour';S.dDay=ds.dday;render();return}
+  if(ds.dp){S.dp=ds.dp;if(ds.dp==='jour')S.dDay=null;render();return}
+  if(ds.rp){S.rp=ds.rp;render();return}
+  if(ds.mesure){S.mesure=ds.mesure;render();return}
+  if(b.id==='rReset'){S.page='all';S.rEmp='';S.rBoost='';S.rStat='';render();return}
   if(ds.hist){S.histGran=ds.hist;render();return}
   if(ds.day){S.selDate=ds.day;S.calMonth=ds.day.slice(0,7);render();return}
   if(ds.cal){var m=S.calMonth||(S.selDate||today()).slice(0,7);if(ds.cal==='0'){S.selDate=today();S.calMonth=today().slice(0,7)}else{var d=parse(m+'-01');d.setMonth(d.getMonth()+(+ds.cal));S.calMonth=ymd(d).slice(0,7)}render();return}
-  if(ds.addb){var dr=draft(ds.addb);dr.boosts.push({id:uid(),nom:'Boost '+(dr.boosts.length+1),statut:'actif',messages:''});render();var ins=document.querySelectorAll('[data-card="'+ds.addb+'"] .bn');if(ins.length)ins[ins.length-1].focus();return}
+  if(ds.addb){var dr=draft(ds.addb);dr.cdirty=true;S.open[ds.addb]=true;dr.boosts.push({id:uid(),nom:'Boost '+(dr.boosts.length+1),statut:'actif',messages:''});render();var ins=document.querySelectorAll('[data-card="'+ds.addb+'"] .bn');if(ins.length)ins[ins.length-1].focus();return}
   if(ds.rmb){var p=ds.rmb.split('|');var dr2=draft(p[0]);var bb=dr2.boosts[+p[1]];
     if(b.dataset.armed!=='1'&&bb.messages!==''){b.dataset.armed='1';b.textContent='Retirer ?';return}
-    dr2.boosts.splice(+p[1],1);render();return}
+    dr2.boosts.splice(+p[1],1);dr2.sdirty=true;render();return}
   if(ds.save){saveEntry(ds.save);return}
   if(b.id==='retryLoad'){sheetsLoad();return}
   if(b.id==='copyCode'){getCode().then(function(code){var box=$('codeBox');box.value=code;return navigator.clipboard.writeText(code).then(function(){$('codeMsg').textContent='✓ Code copié. Colle-le dans Apps Script.'},function(){box.hidden=false;box.select();$('codeMsg').textContent='Sélectionne le texte ci-dessous et copie-le (Ctrl+C).'})}).catch(function(){$('codeMsg').textContent='Code introuvable. Ouvre cette page depuis son adresse GitHub.'});return}
@@ -624,10 +886,11 @@ document.addEventListener('click',function(ev){
 document.addEventListener('input',function(ev){
   var el=ev.target, ds=el.dataset;
   if(ds.b){var p=ds.b.split('|');var d=draft(p[0]);d.boosts[+p[1]][p[2]]=el.value;
+    if(p[2]==='messages'){if(!d.cdirty){d.cdirty=true;d.boosts.forEach(function(x,i){var n=$('nv_'+p[0]+'_'+i);if(n)n.innerHTML=nvHtml(x,d.base)})}}else d.sdirty=true;
     if(p[2]==='statut'){render();return}
-    var nvEl=$('nv_'+p[0]+'_'+p[1]);if(nvEl)nvEl.innerHTML=nvHtml(d.boosts[+p[1]],d.base);
-    $('sum_'+p[0]).innerHTML=sumHtml(totaux(d.boosts,d.reels,d.base));return}
-  if(ds.reels){var d2=draft(ds.reels);d2.reels=el.value;$('sum_'+ds.reels).innerHTML=sumHtml(totaux(d2.boosts,d2.reels,d2.base));return}
+    var nvEl=$('nv_'+p[0]+'_'+p[1]);if(nvEl&&d.cdirty)nvEl.innerHTML=nvHtml(d.boosts[+p[1]],d.base);
+    $('sum_'+p[0]).innerHTML=sumHtml(totaux(d.boosts,d.reels,d.base),d);return}
+  if(ds.reels){var d2=draft(ds.reels);d2.reels=el.value;var sm=$('sum_'+ds.reels);if(sm)sm.innerHTML=sumHtml(totaux(d2.boosts,d2.reels,d2.base),d2);return}
 });
 document.addEventListener('change',function(ev){
   var el=ev.target, ds=el.dataset;
@@ -637,10 +900,18 @@ document.addEventListener('change',function(ev){
   if(el.id==='impCol'){S.imp.col=+el.value;render();return}
   if(el.id==='impHead'){S.imp.head=el.checked;render();return}
   if(el.id==='threeRef'){S.threeRef=el.value||null;render();return}
+  if(el.id==='dA'){S.pa=el.value||null;render();return}
+  if(el.id==='dB'){S.pb=el.value||null;render();return}
+  if(el.id==='rA'){S.ra=el.value||null;render();return}
+  if(el.id==='rB'){S.rb=el.value||null;render();return}
+  if(el.id==='rEmp'){S.rEmp=el.value;render();return}
+  if(el.id==='rBoost'){S.rBoost=el.value;render();return}
+  if(el.id==='rStat'){S.rStat=el.value;render();return}
   if(ds.assign){setPage(ds.assign,{responsable:el.value||null});return}
   if(ds.rename){var n=el.value.trim();if(n)setPage(ds.rename,{nom:n});return}
   if(ds.label){setMember(ds.label,{libelle:el.value.trim()});return}
 });
+document.addEventListener('toggle',function(ev){var o=ev.target&&ev.target.dataset&&ev.target.dataset.open;if(o)S.open[o]=ev.target.open},true);
 document.addEventListener('submit',function(ev){
   if(ev.target.id==='addMember'){ev.preventDefault();var nm=$('newMember').value.trim();if(!nm)return;
     if(!online()){S.membres['m'+uid()]={libelle:nm};render();return}
@@ -694,6 +965,7 @@ function startDemo(){
       base=Math.max(40,base+d[4]*0.3+Math.round((rnd()-0.5)*16));
       var share=base*(0.85+rnd()*0.25);
       for(var k=0;k<n;k++){cum[k]=(cum[k]||0)+Math.round(share/n);boosts.push({id:d[0]+k,nom:'Boost '+(k+1),statut:k===n-1&&rnd()>0.5?'pause':(k===0&&rnd()>0.85?'supprime':'actif'),messages:cum[k]})}
+      boosts.forEach(function(b){b.nouveaux=nouveaux(b,prevBase)});
       var dt=parse(date); dt.setHours(i?17:8,Math.floor(rnd()*59));
       var e={id:d[0]+i,pageId:d[0],auteur:d[2],horodatage:dt.toISOString(),date:date,jour:JOURS[dt.getDay()],heure:pad(dt.getHours())+':'+pad(dt.getMinutes()),boosts:boosts,mode:'cumul',totaux:totaux(boosts,Math.round(base),prevBase)};
       prevBase=baseOf(e);
