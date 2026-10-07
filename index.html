@@ -204,7 +204,7 @@ function allEntries(){var out=[];Object.keys(S.entries).forEach(function(u){out=
    base = null : premier relevé de la page (0 nouveau) ; base absente : ancien mode (messages du jour). */
 function nouveaux(b,base){
   var c=+b.messages||0; if(base===undefined)return c; if(base===null)return 0;
-  if(!(b.id in base))return c; var p=+base[b.id]||0; return c>=p?c-p:c;
+  if(!(b.id in base))return c; var p=+base[b.id]||0; return c>=p?c-p:0;
 }
 function baseOf(e){if(!e)return null;var m={};e.boosts.forEach(function(b){m[b.id]=+b.messages||0});return m}
 function totaux(boosts,reels,base){
@@ -249,6 +249,7 @@ function aggregate(dm,k,g,filter){
 }
 function memberName(u){
   if(!u)return '—';
+  if(u==='import')return 'Import Excel';
   var m=S.membres[u]||{};
   return m.libelle||S.names[u]||m.nomSaisi||(u===S.me?'Moi':'Employé');
 }
@@ -760,6 +761,7 @@ function watch(){
     db.collection('validations').onSnapshot(function(s){if(S.demo)return;var v={};s.docs.forEach(function(d){v[d.id]=Object.assign({},d.data())});S.valid=v;soft()},function(){});
   }
   if(S.me)subEntries(S.me);
+  if(S.owner)subEntries('import');
 }
 function readHash(){
   var h=location.hash.slice(1); if(!/(^|&)(api|k)=/.test(h))return;
