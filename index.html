@@ -288,18 +288,22 @@ function viewDash(){
   var curA=0,curB=0,curR=0,hasR=false,best=null,worst=null;
   var rows=ids.map(function(pid){
     var p=S.pages[pid], st=latestState(pid,dm), d=dm[pid]||{};
-    var e0=d[t],e1=d[y],e2=d[y2];
-    var v0=e0?e0.totaux.reels:null,v1=e1?e1.totaux.reels:null,v2=e2?e2.totaux.reels:null;
+    var e0=d[t];
     if(st){curA+=st.totaux.actifs}
-    if(e0){curB+=e0.totaux.messagesBoosts;if(v0!=null){curR+=v0;hasR=true}}
+    if(e0){curB+=e0.totaux.messagesBoosts;if(e0.totaux.reels!=null){curR+=e0.totaux.reels;hasR=true}}
+    /* 3 derniers jours saisis pour cette page (aujourd'hui, J-1, J-2 quand la saisie est à jour) */
+    var ks=Object.keys(d).filter(function(x){return x<=t}).sort().slice(-3), L3=ks.map(function(k){return d[k]});
+    while(L3.length<3){L3.unshift(null);ks.unshift(null)}
+    var la=L3[2], v0=la?la.totaux.reels:null, v1=L3[1]?L3[1].totaux.reels:null, v2=L3[0]?L3[0].totaux.reels:null;
     var ev=v0!=null&&v1!=null?v0-v1:null;
+    var dl=function(k){return k?'<span class="muted" style="display:block;font-size:.7rem;font-weight:400">'+(k===t?'auj.':k===y?'hier':short(k))+'</span>':''};
     if(ev!=null){if(!best||ev>best.v)best={pid:pid,v:ev};if(!worst||ev<worst.v)worst={pid:pid,v:ev}}
-    var ecart=e0?e0.totaux.ecart:null;
+    var ecart=la?la.totaux.ecart:null;
     var hasWeek=Object.keys(d).some(function(x){return weekKey(x)===wk});
     return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(p.nom)+'</strong></td><td>'+esc(memberName(p.responsable))+'</td>'+
       '<td class="n">'+(st?st.totaux.actifs:'—')+'<span class="muted" style="font-weight:400"> /'+(st?st.totaux.total:'—')+'</span></td>'+
-      '<td class="n">'+(e0?nf(e0.totaux.messagesBoosts):'—')+'</td><td class="n">'+nf(v0)+'</td><td>'+delta(ecart)+'</td>'+
-      '<td class="n muted">'+nf(v2)+'</td><td class="n muted">'+nf(v1)+'</td><td class="n"><strong>'+nf(v0)+'</strong></td>'+
+      '<td class="n">'+(la?nf(la.totaux.messagesBoosts):'—')+dl(ks[2])+'</td><td class="n">'+nf(v0)+dl(ks[2])+'</td><td>'+delta(ecart)+'</td>'+
+      '<td class="n muted">'+nf(v2)+dl(ks[0])+'</td><td class="n muted">'+nf(v1)+dl(ks[1])+'</td><td class="n"><strong>'+nf(v0)+'</strong>'+dl(ks[2])+'</td>'+
       '<td>'+delta(ev,{pct:pct(v0,v1)})+'</td><td>'+statusChip(weekStatus(pid,wk),hasWeek)+'</td></tr>';
   }).join('');
   var mon=monday(t), el=Math.round((parse(t)-parse(mon))/864e5), cw=sumRange(dm,mon,t), pw=sumRange(dm,addDays(mon,-7),addDays(t,-7));
@@ -313,8 +317,8 @@ function viewDash(){
     tile('Pages',best?'<span style="font-size:1rem">'+esc(S.pages[best.pid].nom)+' '+delta(best.v,{plain:true})+'</span>':'—',worst&&worst.v<0?'À vérifier : '+esc(S.pages[worst.pid].nom)+' '+delta(worst.v,{plain:true}):'<span class="muted">meilleure progression</span>');
   return '<div style="display:grid;gap:18px">'+
     '<div class="tiles">'+tiles+'</div>'+
-    '<section class="panel"><div class="ph"><h2>Pages aujourd\'hui</h2><span class="label">'+dayName(t)+' '+short(t)+' · '+wk.replace('-S',' · S')+'</span></div>'+
-    '<div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th class="n">Boosts actifs</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th><th class="n">J-2</th><th class="n">J-1</th><th class="n">Aujourd\'hui</th><th>Évolution</th><th>Statut semaine</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
+    '<section class="panel"><div class="ph"><h2>Pages · 3 derniers jours saisis</h2><span class="label">'+dayName(t)+' '+short(t)+' · '+wk.replace('-S',' · S')+'</span></div>'+
+    '<div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th class="n">Boosts actifs</th><th class="n">Msg boosts</th><th class="n">Msg réels</th><th>Écart</th><th class="n">Jour 1</th><th class="n">Jour 2</th><th class="n">Dernier jour</th><th>Évolution</th><th>Statut semaine</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
     '<div class="grid2">'+threeDays(dm)+chart14(dm)+'</div></div>';
 }
 function sumRange(dm,a,b){var r={reels:0,boosts:0},n=0;for(var d=a;d<=b;d=addDays(d,1)){var x=dayTotal(dm,d,'all');if(x){n++;r.reels+=x.reels;r.boosts+=x.boosts}}return n?r:null}
@@ -323,8 +327,9 @@ function tile(l,v,s){return '<div class="tile"><span class="label">'+l+'</span><
 function emptyStart(){
   return '<section class="panel"><h2>Commence par créer tes pages</h2><p class="muted" style="margin:0">Ajoute tes pages et attribue-les à tes employés dans l\'onglet Pages et équipe.</p><div class="row"><button class="primary" type="button" data-tab="equipe">Créer une page</button><button type="button" id="demoOn">Voir avec des exemples</button></div></section>';
 }
+function lastDataDay(dm,f){var t=today(),best=null;pageIds(f).forEach(function(pid){Object.keys(dm[pid]||{}).forEach(function(k){if(k<=t&&(!best||k>best))best=k})});return best}
 function threeDays(dm){
-  var ref=S.threeRef||today(), f=S.page;
+  var ref=S.threeRef||lastDataDay(dm,S.page)||today(), f=S.page;
   var ds=[addDays(ref,-2),addDays(ref,-1),ref], v=ds.map(function(d){return dayTotal(dm,d,f)});
   var cells=ds.map(function(d,i){
     var cur=v[i], prev=i?v[i-1]:null;
@@ -762,6 +767,14 @@ function watch(){
   }
   if(S.me)subEntries(S.me);
   if(S.owner)subEntries('import');
+  db.collection('historique').onSnapshot(function(snap){
+    var out=[];
+    snap.docs.forEach(function(d){var h=d.data();(h.jours||[]).forEach(function(j){
+      out.push({id:j.id,pageId:h.pageId,auteur:'import',horodatage:j.horodatage,date:j.date,jour:j.jour,heure:j.heure,mode:'cumul',totaux:j.totaux,
+        boosts:(j.boosts||[]).map(function(b){return{id:b.id,nom:'Boost '+b.id.slice(1),statut:'actif',messages:b.messages,nouveaux:b.nouveaux}})});
+    })});
+    S.entries.historique=out; if(!S.demo)soft();
+  },function(){});
 }
 function readHash(){
   var h=location.hash.slice(1); if(!/(^|&)(api|k)=/.test(h))return;
