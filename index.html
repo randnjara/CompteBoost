@@ -90,7 +90,8 @@ button:disabled{opacity:.5;cursor:default}
 .legend{display:flex;gap:14px;font-size:.82rem;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .pagecard{display:grid;gap:12px}
-.boost{display:grid;grid-template-columns:minmax(0,1fr) 130px 110px auto;gap:8px;align-items:center}
+.nv{font-weight:700;color:var(--up);text-align:right}
+.boost{display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 64px auto;gap:8px;align-items:center}
 .boost.del input,.boost.del select{opacity:.55}
 .sumrow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
 .sumrow>div{background:var(--soft);border-radius:10px;padding:8px 10px;display:grid;gap:2px;min-width:0}
@@ -177,9 +178,16 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 
 /* ---------- Données dérivées ---------- */
 function allEntries(){var out=[];Object.keys(S.entries).forEach(function(u){out=out.concat(S.entries[u]||[])});return out}
-function totaux(boosts,reels){
+/* Compteurs cumulés : nouveaux messages = compteur du jour − compteur de la saisie précédente.
+   base = null : premier relevé de la page (0 nouveau) ; base absente : ancien mode (messages du jour). */
+function nouveaux(b,base){
+  var c=+b.messages||0; if(base===undefined)return c; if(base===null)return 0;
+  if(!(b.id in base))return c; var p=+base[b.id]||0; return c>=p?c-p:c;
+}
+function baseOf(e){if(!e)return null;var m={};e.boosts.forEach(function(b){m[b.id]=+b.messages||0});return m}
+function totaux(boosts,reels,base){
   var t={actifs:0,pause:0,supprimes:0,total:0,messagesBoosts:0};
-  (boosts||[]).forEach(function(b){t.total++;var m=+b.messages||0;if(b.statut==='actif'){t.actifs++;t.messagesBoosts+=m}else if(b.statut==='pause')t.pause++;else t.supprimes++});
+  (boosts||[]).forEach(function(b){t.total++;var m=nouveaux(b,base);if(b.statut==='actif'){t.actifs++;t.messagesBoosts+=m}else if(b.statut==='pause')t.pause++;else t.supprimes++});
   t.reels=reels==null||reels===''?null:+reels; t.ecart=t.reels==null?null:t.reels-t.messagesBoosts; return t;
 }
 /* Valeur du jour d'une page = dernière saisie de ce jour */
@@ -492,7 +500,7 @@ function lastOwnEntry(pid){
 function draft(pid){
   if(!S.drafts[pid]){
     var last=lastOwnEntry(pid);
-    S.drafts[pid]={boosts:last?last.boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}):[{id:uid(),nom:'Boost 1',statut:'actif',messages:''}],reels:''};
+    S.drafts[pid]={boosts:last?last.boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}):[{id:uid(),nom:'Boost 1',statut:'actif',messages:''}],reels:'',base:baseOf(last)};
   }
   return S.drafts[pid];
 }
@@ -501,16 +509,17 @@ function viewSaisie(isEmployee){
   var ids=myPages(isEmployee);
   if(!ids.length)return '<section class="panel"><h2>Aucune page attribuée</h2><p class="muted" style="margin:0">'+(isEmployee?'Ton accès est enregistré. L\'administrateur doit maintenant t\'attribuer tes pages.':'Crée une page dans l\'onglet Pages et équipe.')+'</p></section>';
   var cards=ids.map(function(pid){
-    var d=draft(pid), t=totaux(d.boosts,d.reels), last=lastOwnEntry(pid);
+    var d=draft(pid), t=totaux(d.boosts,d.reels,d.base), last=lastOwnEntry(pid);
     var rows=d.boosts.map(function(b,i){
       return '<div class="boost'+(b.statut==='supprime'?' del':'')+'"><input class="bn" id="bn_'+pid+'_'+b.id+'" data-b="'+pid+'|'+i+'|nom" value="'+esc(b.nom)+'" aria-label="Nom du boost">'+
         '<select id="bs_'+pid+'_'+b.id+'" data-b="'+pid+'|'+i+'|statut" aria-label="Statut">'+Object.keys(STATUTS).map(function(s){return '<option value="'+s+'"'+(b.statut===s?' selected':'')+'>'+STATUTS[s]+'</option>'}).join('')+'</select>'+
-        '<input id="bm_'+pid+'_'+b.id+'" type="number" min="0" step="1" inputmode="numeric" data-b="'+pid+'|'+i+'|messages" value="'+esc(b.messages)+'" placeholder="Messages" aria-label="Messages du boost">'+
+        '<input id="bm_'+pid+'_'+b.id+'" type="number" min="0" step="1" inputmode="numeric" data-b="'+pid+'|'+i+'|messages" value="'+esc(b.messages)+'" placeholder="Compteur" aria-label="Compteur total du boost">'+
+        '<span class="nv num" id="nv_'+pid+'_'+i+'">'+nvHtml(b,d.base)+'</span>'+
         '<button class="link" type="button" data-rmb="'+pid+'|'+i+'" aria-label="Retirer la ligne">✕</button></div>';
     }).join('');
     return '<section class="panel pagecard" data-card="'+pid+'"><div class="ph"><h2>'+esc(S.pages[pid].nom)+'</h2><span class="label">'+(last?'Dernière saisie : '+cap(last.jour)+' '+short(last.date)+' à '+last.heure:'Aucune saisie')+'</span></div>'+
       '<div class="reelbox"><label for="reels_'+pid+'"><span class="rt">Nombre réel de messages comptés</span><span class="muted" style="font-size:.85rem">Messages que tu as comptés toi-même sur la page</span></label><input id="reels_'+pid+'" type="number" min="0" step="1" inputmode="numeric" data-reels="'+pid+'" value="'+esc(d.reels)+'" placeholder="0" required></div>'+
-      '<div style="display:grid;gap:8px"><h3>Boosts de la page</h3><div class="boost label" style="font-size:.66rem"><span class="bn">Boost</span><span>Statut</span><span>Messages</span><span></span></div>'+rows+
+      '<div style="display:grid;gap:8px"><h3>Boosts de la page</h3><div class="boost label" style="font-size:.66rem"><span class="bn">Boost</span><span>Statut</span><span>Compteur total</span><span>Nouveaux</span><span></span></div>'+rows+
       '<div><button class="small" type="button" data-addb="'+pid+'">+ Ajouter un boost</button></div></div>'+
       '<div class="sumrow" id="sum_'+pid+'">'+sumHtml(t)+'</div>'+
       '<div class="row"><button class="primary" type="button" data-save="'+pid+'">Enregistrer</button><span class="muted" style="font-size:.85rem">Date et heure ajoutées automatiquement.</span></div><div class="msg '+((S.msgs[pid]||{}).c||'')+'" role="status">'+((S.msgs[pid]||{}).t||'')+'</div></section>';
@@ -523,19 +532,20 @@ function viewSaisie(isEmployee){
   }
   return '<div style="display:grid;gap:18px">'+cards+hist+'</div>';
 }
+function nvHtml(b,base){if(b.messages===''||b.statut==='supprime')return '<span class="muted">—</span>';if(base===null)return '<span class="muted" title="Premier relevé">1er</span>';var n=nouveaux(b,base);return '+'+nf(n)}
 function sumHtml(t){
   return '<div><span class="label">Actifs</span><span class="v">'+t.actifs+'</span></div><div><span class="label">En pause</span><span class="v">'+t.pause+'</span></div><div><span class="label">Supprimés</span><span class="v">'+t.supprimes+'</span></div>'+
-    '<div><span class="label">Total boosts</span><span class="v">'+t.total+'</span></div><div><span class="label">Msg boosts actifs</span><span class="v">'+nf(t.messagesBoosts)+'</span></div><div><span class="label">Écart réels</span><span class="v">'+(t.reels==null?'—':delta(t.ecart,{plain:true}))+'</span></div>';
+    '<div><span class="label">Total boosts</span><span class="v">'+t.total+'</span></div><div><span class="label">Nouveaux msg boosts</span><span class="v">'+nf(t.messagesBoosts)+'</span></div><div><span class="label">Écart réels</span><span class="v">'+(t.reels==null?'—':delta(t.ecart,{plain:true}))+'</span></div>';
 }
 function saveEntry(pid){
   var d=draft(pid);
   if(d.reels===''||isNaN(+d.reels)){S.msgs[pid]={t:'Indique le nombre réel de messages comptés.',c:'err'};render();var ri=$('reels_'+pid);if(ri)ri.focus();return}
   if(d.boosts.some(function(b){return b.messages===''||isNaN(+b.messages)||+b.messages<0})){S.msgs[pid]={t:'Indique le nombre de messages de chaque boost (0 si aucun).',c:'err'};render();return}
   var now=new Date();
-  var boosts=d.boosts.map(function(b){return{id:b.id,nom:(b.nom||'').trim()||'Boost',statut:b.statut,messages:Math.round(+b.messages)}});
+  var boosts=d.boosts.map(function(b){var x={id:b.id,nom:(b.nom||'').trim()||'Boost',statut:b.statut,messages:Math.round(+b.messages)};x.nouveaux=nouveaux(x,d.base);return x});
   var e={pageId:pid,auteur:S.me||'demo',horodatage:now.toISOString(),date:ymd(now),jour:JOURS[now.getDay()],heure:pad(now.getHours())+':'+pad(now.getMinutes()),
-    boosts:boosts,totaux:totaux(boosts,Math.round(+d.reels))};
-  var done=function(){S.drafts[pid]={boosts:boosts.map(function(b){return Object.assign({},b)}),reels:''};S.msgs[pid]={t:'✓ Enregistré '+e.jour+' '+short(e.date)+' à '+e.heure,c:'ok'};render()};
+    boosts:boosts,mode:'cumul',totaux:totaux(boosts,Math.round(+d.reels),d.base)};
+  var done=function(){S.drafts[pid]={boosts:boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}),reels:'',base:baseOf(e)};S.msgs[pid]={t:'✓ Enregistré '+e.jour+' '+short(e.date)+' à '+e.heure,c:'ok'};render()};
   if(S.demo||!S.db){e.id=uid();(S.entries[e.auteur]=S.entries[e.auteur]||[]).push(e);done();return}
   var btn=document.querySelector('[data-save="'+pid+'"]'); if(btn)btn.disabled=true;
   S.db.collection('saisies/'+S.me+'/entrees').add(e).then(done,function(err){S.msgs[pid]={t:err&&err.code==='quota_exceeded'?'Espace de stockage plein. Préviens l\'administrateur.':'Enregistrement refusé. Vérifie que l\'administrateur t\'a donné l\'accès en modification.',c:'err'};render()});
@@ -570,8 +580,9 @@ document.addEventListener('input',function(ev){
   var el=ev.target, ds=el.dataset;
   if(ds.b){var p=ds.b.split('|');var d=draft(p[0]);d.boosts[+p[1]][p[2]]=el.value;
     if(p[2]==='statut'){render();return}
-    $('sum_'+p[0]).innerHTML=sumHtml(totaux(d.boosts,d.reels));return}
-  if(ds.reels){var d2=draft(ds.reels);d2.reels=el.value;$('sum_'+ds.reels).innerHTML=sumHtml(totaux(d2.boosts,d2.reels));return}
+    var nvEl=$('nv_'+p[0]+'_'+p[1]);if(nvEl)nvEl.innerHTML=nvHtml(d.boosts[+p[1]],d.base);
+    $('sum_'+p[0]).innerHTML=sumHtml(totaux(d.boosts,d.reels,d.base));return}
+  if(ds.reels){var d2=draft(ds.reels);d2.reels=el.value;$('sum_'+ds.reels).innerHTML=sumHtml(totaux(d2.boosts,d2.reels,d2.base));return}
 });
 document.addEventListener('change',function(ev){
   var el=ev.target, ds=el.dataset;
@@ -626,14 +637,15 @@ function startDemo(){
   defs.forEach(function(d){S.pages[d[0]]={nom:d[1],responsable:d[2],archivee:false}});
   var seed=7; function rnd(){seed=(seed*9301+49297)%233280;return seed/233280}
   defs.forEach(function(d){
-    var base=d[3];
+    var base=d[3], cum=[], prevBase=null, n=3+Math.floor(rnd()*3);
     for(var i=34;i>=0;i--){
-      var date=addDays(today(),-i), n=3+Math.floor(rnd()*3), boosts=[];
+      var date=addDays(today(),-i), boosts=[];
       base=Math.max(40,base+d[4]*0.3+Math.round((rnd()-0.5)*16));
       var share=base*(0.85+rnd()*0.25);
-      for(var k=0;k<n;k++)boosts.push({id:d[0]+k,nom:'Boost '+(k+1),statut:k===n-1&&rnd()>0.5?'pause':(k===0&&rnd()>0.85?'supprime':'actif'),messages:Math.round(share/n)});
+      for(var k=0;k<n;k++){cum[k]=(cum[k]||0)+Math.round(share/n);boosts.push({id:d[0]+k,nom:'Boost '+(k+1),statut:k===n-1&&rnd()>0.5?'pause':(k===0&&rnd()>0.85?'supprime':'actif'),messages:cum[k]})}
       var dt=parse(date); dt.setHours(i?17:8,Math.floor(rnd()*59));
-      var e={id:d[0]+i,pageId:d[0],auteur:d[2],horodatage:dt.toISOString(),date:date,jour:JOURS[dt.getDay()],heure:pad(dt.getHours())+':'+pad(dt.getMinutes()),boosts:boosts,totaux:totaux(boosts,Math.round(base))};
+      var e={id:d[0]+i,pageId:d[0],auteur:d[2],horodatage:dt.toISOString(),date:date,jour:JOURS[dt.getDay()],heure:pad(dt.getHours())+':'+pad(dt.getMinutes()),boosts:boosts,mode:'cumul',totaux:totaux(boosts,Math.round(base),prevBase)};
+      prevBase=baseOf(e);
       (S.entries[d[2]]=S.entries[d[2]]||[]).push(e);
     }
   });
