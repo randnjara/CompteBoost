@@ -176,6 +176,28 @@ function delta(d,opts){
 function pct(a,b){return b?((a-b)/b)*100:null}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 
+/* ---------- Stockage : claude.ai (db) ou feuille Google (Apps Script) ---------- */
+var API={url:null,key:null};
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{if(v==null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){}}
+function online(){return !S.demo&&!!S.mode}
+function api(action,params){
+  var body=Object.assign({action:action,key:API.key},params||{});
+  return fetch(API.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),redirect:'follow'})
+    .then(function(r){return r.json()}).then(function(j){if(!j||!j.ok)throw new Error(j&&j.error||'Réponse invalide');return j.data});
+}
+function wSet(col,id,data){return S.mode==='claude'?S.db.doc(col+'/'+id).set(data):api('set',{col:col,id:id,data:data})}
+function wUpdate(col,id,patch){return S.mode==='claude'?S.db.doc(col+'/'+id).update(patch):api('update',{col:col,id:id,data:patch})}
+function wSetMany(col,docs){
+  if(S.mode==='sheets')return api('setMany',{col:col,docs:docs});
+  return docs.reduce(function(pr,d){return pr.then(function(){return S.db.doc(col+'/'+d.id).set(d.data)})},Promise.resolve());
+}
+function wAddEntry(e){
+  if(S.mode==='sheets')return api('addEntry',{entry:e});
+  return S.db.collection('saisies/'+S.me+'/entrees').add(e).then(function(){return e});
+}
+function linkFor(key){return location.origin+location.pathname+'#api='+encodeURIComponent(API.url)+'&k='+encodeURIComponent(key)}
+
 /* ---------- Données dérivées ---------- */
 function allEntries(){var out=[];Object.keys(S.entries).forEach(function(u){out=out.concat(S.entries[u]||[])});return out}
 /* Compteurs cumulés : nouveaux messages = compteur du jour − compteur de la saisie précédente.
@@ -249,9 +271,10 @@ function render(){
   $('demoBanner').hidden=!S.demo;
   setTabs();
   var v=$('view');
-  if(!S.owner){v.innerHTML=viewSaisie(true);return}
+  if(S.setup&&!S.demo){$('tabs').hidden=true;$('roleLabel').textContent='Installation';v.innerHTML=viewSetup();return}
+  if(!S.owner){v.innerHTML=viewSaisie(true)+errBar();return}
   var f={dash:viewDash,saisie:function(){return viewSaisie(false)},cal:viewCal,recap:viewRecap,valid:viewValid,equipe:viewEquipe}[S.tab];
-  v.innerHTML=f();
+  v.innerHTML=errBar()+f();
   if(S.tab==='equipe')resolveNames();
 }
 function pageSelect(id,val,withAll){
@@ -405,17 +428,32 @@ function viewEquipe(){
   var ids=pageIds(), mids=Object.keys(S.membres);
   var opts=function(sel){return '<option value="">Non attribuée</option>'+(S.me?'<option value="'+S.me+'"'+(sel===S.me?' selected':'')+'>Moi (administrateur)</option>':'')+mids.filter(function(u){return u!==S.me}).map(function(u){return '<option value="'+u+'"'+(sel===u?' selected':'')+'>'+esc(memberName(u))+'</option>'}).join('')};
   var prow=ids.map(function(pid){var p=S.pages[pid];return '<tr><td><input id="pn_'+pid+'" value="'+esc(p.nom)+'" data-rename="'+pid+'" aria-label="Nom de la page"></td><td><select id="pa_'+pid+'" data-assign="'+pid+'" aria-label="Responsable">'+opts(p.responsable)+'</select></td><td><button class="link" type="button" data-archive="'+pid+'">Archiver</button></td></tr>'}).join('')||'<tr><td colspan="3" class="empty">Aucune page pour l\'instant.</td></tr>';
-  var mrow=mids.filter(function(u){return u!==S.me}).map(function(u){
-    var n=ids.filter(function(p){return S.pages[p].responsable===u}).map(function(p){return esc(S.pages[p].nom)}).join(', ');
-    return '<tr><td>'+esc(S.names[u]||S.membres[u].nomSaisi||'Employé')+'</td><td><input id="ml_'+u+'" data-label="'+u+'" value="'+esc(S.membres[u].libelle||'')+'" placeholder="Nom affiché" aria-label="Nom affiché"></td><td style="white-space:normal">'+(n||'<span class="muted">Aucune</span>')+'</td></tr>';
-  }).join('')||'<tr><td colspan="3" class="empty">Aucun employé n\'a encore ouvert le lien.</td></tr>';
   var arch=Object.keys(S.pages).filter(function(p){return S.pages[p].archivee});
   return '<div class="grid2"><section class="panel"><h2>Pages</h2><form class="row" id="addPage"><input id="newPage" placeholder="Nom de la nouvelle page" required style="flex:1 1 200px"><button class="primary" type="submit">Ajouter</button></form>'+importHtml()+
     '<div class="tablebox"><table><thead><tr><th>Page</th><th>Responsable</th><th></th></tr></thead><tbody>'+prow+'</tbody></table></div>'+
     (arch.length?'<div class="muted" style="font-size:.85rem">Archivées : '+arch.map(function(p){return esc(S.pages[p].nom)+' <button class="link" type="button" data-unarchive="'+p+'">restaurer</button>'}).join(' · ')+'</div>':'')+'<div class="msg" id="eqMsg" role="status">'+(S.msgs.eq||'')+'</div></section>'+
-    '<section class="panel"><h2>Employés</h2><div style="display:grid;gap:8px"><span class="label">Lien d\'accès des employés</span><div class="copy"><input id="linkBox" readonly value="'+esc(shareUrl())+'" aria-label="Lien"><button type="button" id="copyLink">Copier</button></div>'+
-    '<div class="muted" style="font-size:.85rem">Partage la page avec l\'employé par e-mail (menu Partager), puis envoie-lui ce lien. À sa première ouverture, il apparaît ici et tu peux lui attribuer ses pages.</div></div>'+
-    '<div class="tablebox"><table><thead><tr><th>Compte</th><th>Nom affiché</th><th>Pages attribuées</th></tr></thead><tbody>'+mrow+'</tbody></table></div></section></div>';
+    teamHtml(ids,mids)+'</div>';
+}
+function teamHtml(ids,mids){
+  var others=mids.filter(function(u){return u!==S.me});
+  var pagesOf=function(u){return ids.filter(function(p){return S.pages[p].responsable===u}).map(function(p){return esc(S.pages[p].nom)}).join(', ')||'<span class="muted">Aucune</span>'};
+  if(S.mode==='claude'){
+    var mrow=others.map(function(u){
+      return '<tr><td>'+esc(S.names[u]||S.membres[u].nomSaisi||'Employé')+'</td><td><input id="ml_'+u+'" data-label="'+u+'" value="'+esc(S.membres[u].libelle||'')+'" placeholder="Nom affiché" aria-label="Nom affiché"></td><td style="white-space:normal">'+pagesOf(u)+'</td></tr>';
+    }).join('')||'<tr><td colspan="3" class="empty">Aucun employé n\'a encore ouvert le lien.</td></tr>';
+    return '<section class="panel"><h2>Employés</h2><div style="display:grid;gap:8px"><span class="label">Lien d\'accès des employés</span><div class="copy"><input id="linkBox" readonly value="'+esc(shareUrl())+'" aria-label="Lien"><button type="button" data-copy="'+esc(shareUrl())+'">Copier</button></div>'+
+      '<div class="muted" style="font-size:.85rem">Partage la page avec l\'employé par e-mail (menu Partager), puis envoie-lui ce lien. À sa première ouverture, il apparaît ici et tu peux lui attribuer ses pages.</div></div>'+
+      '<div class="tablebox"><table><thead><tr><th>Compte</th><th>Nom affiché</th><th>Pages attribuées</th></tr></thead><tbody>'+mrow+'</tbody></table></div></section>';
+  }
+  var rows=others.map(function(u){
+    var m=S.membres[u], l=m.token&&API.url?linkFor(m.token):'';
+    return '<tr><td><input id="ml_'+u+'" data-label="'+u+'" value="'+esc(m.libelle||'')+'" placeholder="Nom" aria-label="Nom de l\'employé"></td><td style="white-space:normal">'+pagesOf(u)+'</td><td>'+(l?'<button class="small" type="button" data-copy="'+esc(l)+'">Copier son lien</button>':'<span class="muted">exemple</span>')+'</td></tr>';
+  }).join('')||'<tr><td colspan="3" class="empty">Ajoute ton premier employé ci-dessus.</td></tr>';
+  var admin=API.url&&API.key&&S.owner?'<div style="display:grid;gap:6px"><span class="label">Ton lien administrateur</span><div class="copy"><input readonly value="'+esc(linkFor(API.key))+'" aria-label="Lien administrateur"><button type="button" data-copy="'+esc(linkFor(API.key))+'">Copier</button></div><div class="muted" style="font-size:.82rem">Garde-le pour toi : il ouvre l\'administration sur n\'importe quel appareil.</div></div>':'';
+  return '<section class="panel"><h2>Employés</h2>'+admin+
+    '<form class="row" id="addMember"><input id="newMember" placeholder="Nom de l\'employé" required style="flex:1 1 200px"><button class="primary" type="submit">Ajouter un employé</button></form>'+
+    '<div class="muted" style="font-size:.85rem">Chaque employé a son propre lien. Copie-le et envoie-le-lui (WhatsApp, Messenger, e-mail). Il ne verra que les pages que tu lui attribues.</div>'+
+    '<div class="tablebox"><table><thead><tr><th>Employé</th><th>Pages attribuées</th><th>Lien d\'accès</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="msg" id="memMsg" role="status">'+(S.msgs.mem||'')+'</div></section>';
 }
 function importHtml(){
   var h='<div class="importbox"><label class="label" for="impFile">Importer les pages depuis un fichier Excel ou CSV</label><input type="file" id="impFile" accept=".xlsx,.xls,.csv,.ods">';
@@ -466,15 +504,14 @@ function readImport(file){
   r.readAsArrayBuffer(file);
 }
 function runImport(){
-  var list=impCompute().fresh, i=0, ok=0, btn=$('impGo'); if(btn)btn.disabled=true;
-  function next(){
-    if(i>=list.length){S.imp=null;S.msgs.imp='✓ '+ok+' page'+(ok>1?'s':'')+' importée'+(ok>1?'s':'')+'. Attribue maintenant un responsable à chacune.';render();return}
-    var n=list[i++], id='p'+uid(), p={nom:n,responsable:null,archivee:false,creeLe:new Date().toISOString(),source:'import'};
-    var m=$('impMsg'); if(m)m.textContent='Import en cours… '+i+' / '+list.length;
-    if(S.demo||!S.db){S.pages[id]=p;ok++;next();return}
-    S.db.doc('pages/'+id).set(p).then(function(){S.pages[id]=p;ok++;next()},function(err){S.imp=null;S.msgs.imp=(err&&err.code==='quota_exceeded'?'Stockage plein. ':'Import interrompu. ')+ok+' page'+(ok>1?'s':'')+' importée'+(ok>1?'s':'')+' sur '+list.length+'.';render()});
-  }
-  next();
+  var docs=impCompute().fresh.map(function(n){return{id:'p'+uid(),data:{nom:n,responsable:null,archivee:false,creeLe:new Date().toISOString(),source:'import'}}});
+  var ok=0, btn=$('impGo'); if(btn)btn.disabled=true;
+  var fin=function(){S.imp=null;S.msgs.imp='✓ '+ok+' page'+(ok>1?'s':'')+' importée'+(ok>1?'s':'')+'. Attribue maintenant un responsable à chacune.';render()};
+  if(!online()){docs.forEach(function(d){S.pages[d.id]=d.data});ok=docs.length;fin();return}
+  var chunks=[];for(var i=0;i<docs.length;i+=50)chunks.push(docs.slice(i,i+50));
+  chunks.reduce(function(pr,c){return pr.then(function(){var m=$('impMsg');if(m)m.textContent='Import en cours… '+ok+' / '+docs.length;
+    return wSetMany('pages',c).then(function(){c.forEach(function(d){S.pages[d.id]=d.data});ok+=c.length})})},Promise.resolve())
+  .then(fin,function(err){S.imp=null;S.msgs.imp=(err&&err.code==='quota_exceeded'?'Stockage plein. ':'Import interrompu. ')+ok+' page'+(ok>1?'s':'')+' importée'+(ok>1?'s':'')+' sur '+docs.length+'.';render()});
 }
 function shareUrl(){try{var u=(document.referrer||'');return /claude\.ai/.test(u)?u.split('#')[0]:'Lien de cette page (bouton Partager)'}catch(e){return ''}}
 function resolveNames(){
@@ -505,7 +542,7 @@ function draft(pid){
   return S.drafts[pid];
 }
 function viewSaisie(isEmployee){
-  if(isEmployee&&!S.db&&!S.demo)return '<section class="panel"><p class="empty">Connecte-toi sur claude.ai pour ouvrir ton espace de saisie.</p></section>';
+  if(isEmployee&&!online())return '<section class="panel"><p class="empty">Ouvre le lien d\u2019accès que ton administrateur t\u2019a envoyé.</p></section>';
   var ids=myPages(isEmployee);
   if(!ids.length)return '<section class="panel"><h2>Aucune page attribuée</h2><p class="muted" style="margin:0">'+(isEmployee?'Ton accès est enregistré. L\'administrateur doit maintenant t\'attribuer tes pages.':'Crée une page dans l\'onglet Pages et équipe.')+'</p></section>';
   var cards=ids.map(function(pid){
@@ -545,10 +582,10 @@ function saveEntry(pid){
   var boosts=d.boosts.map(function(b){var x={id:b.id,nom:(b.nom||'').trim()||'Boost',statut:b.statut,messages:Math.round(+b.messages)};x.nouveaux=nouveaux(x,d.base);return x});
   var e={pageId:pid,auteur:S.me||'demo',horodatage:now.toISOString(),date:ymd(now),jour:JOURS[now.getDay()],heure:pad(now.getHours())+':'+pad(now.getMinutes()),
     boosts:boosts,mode:'cumul',totaux:totaux(boosts,Math.round(+d.reels),d.base)};
-  var done=function(){S.drafts[pid]={boosts:boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}),reels:'',base:baseOf(e)};S.msgs[pid]={t:'✓ Enregistré '+e.jour+' '+short(e.date)+' à '+e.heure,c:'ok'};render()};
-  if(S.demo||!S.db){e.id=uid();(S.entries[e.auteur]=S.entries[e.auteur]||[]).push(e);done();return}
+  var done=function(saved){if(saved&&saved.heure)e=saved;if(S.mode==='sheets'){(S.entries[S.me]=S.entries[S.me]||[]).push(e)}S.drafts[pid]={boosts:boosts.map(function(b){return{id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}}),reels:'',base:baseOf(e)};S.msgs[pid]={t:'✓ Enregistré '+e.jour+' '+short(e.date)+' à '+e.heure,c:'ok'};render()};
+  if(!online()){e.id=uid();(S.entries[e.auteur]=S.entries[e.auteur]||[]).push(e);done();return}
   var btn=document.querySelector('[data-save="'+pid+'"]'); if(btn)btn.disabled=true;
-  S.db.collection('saisies/'+S.me+'/entrees').add(e).then(done,function(err){S.msgs[pid]={t:err&&err.code==='quota_exceeded'?'Espace de stockage plein. Préviens l\'administrateur.':'Enregistrement refusé. Vérifie que l\'administrateur t\'a donné l\'accès en modification.',c:'err'};render()});
+  wAddEntry(e).then(done,function(err){S.msgs[pid]={t:err&&err.code==='quota_exceeded'?'Espace de stockage plein. Préviens l\'administrateur.':S.mode==='sheets'?'Enregistrement impossible ('+(err&&err.message||'connexion')+'). Réessaie.':'Enregistrement refusé. Vérifie que l\'administrateur t\'a donné l\'accès en modification.',c:'err'};render()});
 }
 
 /* ---------- Événements ---------- */
@@ -568,13 +605,15 @@ document.addEventListener('click',function(ev){
     if(b.dataset.armed!=='1'&&bb.messages!==''){b.dataset.armed='1';b.textContent='Retirer ?';return}
     dr2.boosts.splice(+p[1],1);render();return}
   if(ds.save){saveEntry(ds.save);return}
+  if(b.id==='retryLoad'){sheetsLoad();return}
+  if(b.id==='copyCode'){getCode().then(function(code){var box=$('codeBox');box.value=code;return navigator.clipboard.writeText(code).then(function(){$('codeMsg').textContent='✓ Code copié. Colle-le dans Apps Script.'},function(){box.hidden=false;box.select();$('codeMsg').textContent='Sélectionne le texte ci-dessous et copie-le (Ctrl+C).'})}).catch(function(){$('codeMsg').textContent='Code introuvable. Ouvre cette page depuis son adresse GitHub.'});return}
   if(ds.valid){validate(ds.valid,true);return}
   if(ds.unvalid){validate(ds.unvalid,false);return}
   if(ds.archive){setPage(ds.archive,{archivee:true});return}
   if(ds.unarchive){setPage(ds.unarchive,{archivee:false});return}
   if(b.id==='impGo'){runImport();return}
   if(b.id==='impCancel'){S.imp=null;S.msgs.imp='';render();return}
-  if(b.id==='copyLink'){var box=$('linkBox');navigator.clipboard.writeText(box.value).then(function(){S.msgs.eq='Lien copié.';$('eqMsg').textContent='Lien copié.'},function(){box.select()});return}
+  if(ds.copy!=null){var txt=ds.copy;navigator.clipboard.writeText(txt).then(function(){var o=b.textContent;b.textContent='✓ Copié';setTimeout(function(){b.textContent=o},1500)},function(){var i=b.parentNode.querySelector('input');if(i)i.select();else{S.msgs.mem='Copie bloquée : '+txt;render()}});return}
 });
 document.addEventListener('input',function(ev){
   var el=ev.target, ds=el.dataset;
@@ -597,22 +636,28 @@ document.addEventListener('change',function(ev){
   if(ds.label){setMember(ds.label,{libelle:el.value.trim()});return}
 });
 document.addEventListener('submit',function(ev){
+  if(ev.target.id==='addMember'){ev.preventDefault();var nm=$('newMember').value.trim();if(!nm)return;
+    if(!online()){S.membres['m'+uid()]={libelle:nm};render();return}
+    S.msgs.mem='Création…';render();
+    api('addMember',{nom:nm}).then(function(r){S.membres[r.id]=r.data;S.msgs.mem='✓ '+nm+' ajouté. Copie son lien et attribue-lui ses pages.';render()},function(err){S.msgs.mem='Création impossible : '+(err&&err.message||'connexion');render()});return}
+  if(ev.target.id==='setupForm'){ev.preventDefault();finishSetup();return}
   if(ev.target.id!=='addPage')return; ev.preventDefault();
   var n=$('newPage').value.trim(); if(!n)return;
   var id='p'+uid(), p={nom:n,responsable:null,archivee:false,creeLe:new Date().toISOString()};
-  if(S.demo||!S.db){S.pages[id]=p;render();return}
-  S.db.doc('pages/'+id).set(p).then(function(){S.msgs.eq='Page « '+n+' » ajoutée.'},function(){S.msgs.eq='Ajout refusé.';render()});
+  if(!online()){S.pages[id]=p;render();return}
+  S.pages[id]=p; render();
+  wSet('pages',id,p).then(function(){S.msgs.eq='Page « '+n+' » ajoutée.';soft()},function(){delete S.pages[id];S.msgs.eq='Ajout refusé.';render()});
 });
 function setPage(id,patch){
   Object.assign(S.pages[id],patch);
-  if(S.demo||!S.db){render();return}
-  S.db.doc('pages/'+id).update(patch).catch(function(){S.msgs.eq='Modification refusée.';render()});
+  if(!online()){render();return}
+  wUpdate('pages',id,patch).catch(function(){S.msgs.eq='Modification refusée.';render()});
   render();
 }
 function setMember(u,patch){
   Object.assign(S.membres[u],patch);
-  if(S.demo||!S.db){render();return}
-  S.db.doc('membres/'+u).update(patch).catch(function(){});
+  if(!online()){render();return}
+  wUpdate('membres',u,patch).catch(function(){});
   render();
 }
 function validate(key,on){
@@ -621,7 +666,7 @@ function validate(key,on){
   var parts=key.split('_'), wk=parts[0], pid=parts.slice(1).join('_');
   if(on){var a=aggregate(dayMap(),wk,'semaine',pid);if(a)v.controle={boosts:a.boosts,reels:a.reels,ecart:a.ecart,nbBoosts:a.nbBoosts}}
   S.valid[key]=v;
-  if(!S.demo&&S.db)S.db.doc('validations/'+key).set(v).catch(function(){});
+  if(online())wSet('validations',key,v).catch(function(){});
   render();
 }
 
@@ -659,6 +704,47 @@ function tick(){var n=new Date();$('clock').textContent=cap(JOURS[n.getDay()])+'
 tick(); setInterval(tick,15000);
 
 /* ---------- Connexion aux données ---------- */
+function errBar(){return S.loadErr&&!S.demo?'<div class="banner" style="margin-bottom:14px"><span>Connexion à la feuille Google impossible pour le moment ('+esc(S.loadErr)+'). Les chiffres affichés peuvent dater.</span><button class="small" type="button" id="retryLoad">Réessayer</button></div>':''}
+function randKey(){var a=new Uint8Array(18);try{crypto.getRandomValues(a)}catch(e){for(var i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*256)}return Array.prototype.map.call(a,function(x){return pad(x.toString(16))}).join('').replace(/^(.)(.)/,'$1$2')}
+function pendingKey(){if(!S.pkey){S.pkey=lsGet('cb.pendingKey')||randKey();lsSet('cb.pendingKey',S.pkey)}return S.pkey}
+function viewSetup(){
+  var bad=S.setup==='bad';
+  var step=function(n,t,body){return '<div style="display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start"><span class="num" style="background:var(--accent);color:var(--accent-ink);border-radius:50%;width:28px;height:28px;display:grid;place-items:center;font-weight:700">'+n+'</span><div style="display:grid;gap:6px;min-width:0"><strong>'+t+'</strong>'+(body||'')+'</div></div>'};
+  return '<section class="panel" style="max-width:760px">'+
+    (bad?'<div class="banner"><span>Ce lien ne fonctionne plus ('+esc(S.setupErr||'')+'). Si tu es employé, demande un nouveau lien à ton administrateur.</span></div>':'')+
+    '<h2>Brancher Compte Boost sur ta feuille Google</h2><p class="muted" style="margin:0">À faire une seule fois, par l\'administrateur. Tes données seront enregistrées dans ta feuille, dans de nouveaux onglets « CB_… ». Tes onglets actuels ne sont pas modifiés.</p>'+
+    '<p class="muted" style="margin:0">Tu es employé ? Ouvre plutôt le lien que ton administrateur t\'a envoyé.</p>'+
+    step(1,'Ouvre ta feuille Google des comptes Boost')+
+    step(2,'Clique sur Extensions, puis Apps Script')+
+    step(3,'Efface tout le code affiché, puis colle celui-ci','<div class="row"><button class="primary" type="button" id="copyCode">Copier le code</button><span class="muted" id="codeMsg" style="font-size:.85rem"></span></div><textarea id="codeBox" hidden readonly style="width:100%;min-height:120px;font:12px var(--mono)"></textarea>')+
+    step(4,'Clique sur l\'icône disquette (Enregistrer)')+
+    step(5,'Clique sur Déployer, puis Nouveau déploiement','<span class="muted">Roue dentée → <b>Application Web</b>. « Exécuter en tant que » : <b>Moi</b>. « Qui a accès » : <b>Tout le monde</b>. Clique sur <b>Déployer</b>, puis <b>Autoriser l\'accès</b> et choisis ton compte. Si Google affiche « Google n\'a pas validé cette application », clique sur <b>Paramètres avancés</b>, puis <b>Accéder à … (non sécurisé)</b>, puis <b>Autoriser</b>.</span>')+
+    step(6,'Copie l\'« URL de l\'application Web » et colle-la ici','<form id="setupForm" class="copy"><input id="apiUrl" placeholder="https://script.google.com/macros/s/…/exec" required><button class="primary" type="submit">Terminer</button></form><div class="msg" id="setupMsg" role="status"></div>')+
+    '<div class="row"><button type="button" id="demoOn">Voir avec des exemples</button></div></section>';
+}
+function getCode(){
+  return fetch('apps-script/Code.gs').then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){return t.replace('__ADMIN_KEY__',pendingKey())});
+}
+function finishSetup(){
+  var u=$('apiUrl').value.trim(), m=$('setupMsg');
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[^\/]+\/exec/.test(u)){m.className='msg err';m.textContent='Colle l’adresse qui commence par https://script.google.com/macros/s/ et finit par /exec.';return}
+  API.url=u; API.key=pendingKey(); m.className='msg';m.textContent='Vérification…';
+  api('whoami').then(function(w){
+    if(w.role!=='admin')throw new Error('clé administrateur différente');
+    lsSet('cb.api',API.url);lsSet('cb.key',API.key);lsSet('cb.pendingKey',null);
+    S.setup=null;S.mode='sheets';S.owner=true;S.me='admin';S.tab='equipe';S.msgs.eq='✓ Ta feuille Google est branchée. Copie ton lien administrateur ci-contre et garde-le.';
+    return sheetsLoad().then(function(){render()});
+  }).catch(function(err){API.url=null;m.className='msg err';m.textContent='Échec : '+(err&&err.message||'connexion impossible')+'. Vérifie que « Qui a accès » est bien « Tout le monde » et que tu as collé le code de l’étape 3 (recopie-le si tu as rechargé cette page).'});
+}
+function sheetsLoad(){
+  if(S.demo)return Promise.resolve();
+  return api(S.owner?'all':'me').then(function(d){
+    if(S.demo)return;
+    if(S.owner){S.pages=d.pages||{};S.membres=d.membres||{};S.valid=d.validations||{};var en={};(d.saisies||[]).forEach(function(e){(en[e.auteur]=en[e.auteur]||[]).push(e)});S.entries=en}
+    else{S.pages=d.pages||{};S.membres={};S.membres[S.me]={libelle:d.moi.nom};S.entries={};S.entries[S.me]=d.saisies||[]}
+    S.loadErr='';soft();
+  },function(err){S.loadErr=String(err&&err.message||err);soft()});
+}
 function subEntries(u){
   if(S.subs[u])return;
   S.subs[u]=S.db.collection('saisies/'+u+'/entrees').onSnapshot(function(snap){
@@ -675,22 +761,39 @@ function watch(){
   }
   if(S.me)subEntries(S.me);
 }
+function readHash(){
+  var h=location.hash.slice(1); if(!/(^|&)(api|k)=/.test(h))return;
+  var q={}; h.split('&').forEach(function(kv){var i=kv.indexOf('=');if(i>0)q[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1))});
+  if(q.api)lsSet('cb.api',q.api); if(q.k)lsSet('cb.key',q.k);
+  API.url=q.api||null; API.key=q.k||null;
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+}
 function boot(){
   render();
-  if(!window.claude||!window.claude.use){$('noDb').hidden=false;S.owner=true;S.ready=true;render();return}
+  readHash(); API.url=API.url||lsGet('cb.api'); API.key=API.key||lsGet('cb.key');
+  if(API.url&&API.key){
+    S.mode='sheets';
+    api('whoami').then(function(w){
+      S.owner=w.role==='admin'; S.me=w.id;
+      return sheetsLoad().then(function(){S.ready=true;render();setInterval(function(){if(!document.hidden&&!busyInput())sheetsLoad()},60000)});
+    }).catch(function(err){if(/invalide/i.test(String(err&&err.message))){lsSet('cb.key',null);lsSet('cb.api',null)}S.mode=null;S.ready=true;S.owner=true;S.setup='bad';S.setupErr=String(err&&err.message||err);render()});
+    return;
+  }
+  if(!window.claude||!window.claude.use){S.owner=true;S.setup='install';S.ready=true;render();return}
+  S.mode='claude';
   Promise.all([window.claude.use('db'),window.claude.use('user')]).then(function(r){
     S.db=r[0]; S.user=r[1];
     var p=S.user?Promise.all([S.user.isOwner(),S.user.id(),S.user.name?S.user.name():Promise.resolve('')]):Promise.resolve([true,null,'']);
     return p.then(function(x){
       S.owner=!!x[0]; S.me=x[1]; S.ready=true;
-      if(!S.db){$('noDb').hidden=false;render();return}
+      if(!S.db){S.mode=null;$('noDb').hidden=false;render();return}
       if(!S.owner&&S.me){
         var ref=S.db.doc('membres/'+S.me);
         ref.get().then(function(s){if(!s.exists)return ref.set({inscritLe:new Date().toISOString(),nomSaisi:x[2]||''})}).catch(function(){});
       }
       watch(); render();
     });
-  }).catch(function(){$('noDb').hidden=false;S.owner=true;S.ready=true;render()});
+  }).catch(function(){S.mode=null;$('noDb').hidden=false;S.owner=true;S.ready=true;render()});
 }
 boot();
 })();
