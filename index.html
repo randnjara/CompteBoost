@@ -272,6 +272,8 @@ var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','se
 var MC=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 /* Date de départ du suivi : rien avant cette date dans les statistiques, graphiques et historiques */
 var DEBUT='2026-10-05';
+/* Les employés saisissent dans le logiciel à partir de cette date ; avant, les jours viennent du fichier Excel */
+var SAISIE_DEBUT='2026-10-09';
 /* Statuts des comptes Boost. actif:true = compté comme actif ; hors:true = ne compte plus parmi les boosts. */
 var STATUTS={actif:{l:'Actif',actif:true,c:'ok'},pause:{l:'En pause',c:'todo'},supprime:{l:'Supprimé',hors:true,c:'none'}};
 /* Fuseau horaire de référence : Madagascar (UTC+3) */
@@ -551,12 +553,19 @@ function brouOf(pid,date){var id=pid+'_'+date, best=null;Object.keys(S.brou).for
 function dayStatus(pid,date,dm){
   var c=(dm[pid]||{})[date];
   if(c&&c.J)return (c.J.rectifs||[]).length?'rectifie':'enregistre';
+  if(c&&c.import)return 'importe';
   if(c&&(c.totaux.reels!=null||c.boostsDuJour))return 'enregistre';
   if(brouOf(pid,date))return 'brouillon';
+  if(date<SAISIE_DEBUT)return 'avant';
   if(date<today())return 'non';
   return 'attente';
 }
-var DSTAT={enregistre:['Enregistré','ok'],rectifie:['Rectifié','wa'],brouillon:['Brouillon','bl'],non:['Non effectué','ko'],attente:['En attente','no']};
+var DSTAT={importe:['Importé depuis Excel','bl'],avant:['Pas de relevé Excel','no'],enregistre:['Enregistré','ok'],rectifie:['Rectifié','wa'],brouillon:['Brouillon','bl'],non:['Non effectué','ko'],attente:['En attente','no']};
+/* Heure d'enregistrement affichée : jamais d'heure inventée pour les relevés importés d'Excel */
+function isImp(c){return !!(c&&(c.import||c.J&&c.J.source==='import'))}
+function impDate(pid){var x=(S.histImp||{})[pid];return x?fmtD(ymdOf(x)):'—'}
+function whenTxt(c){if(!c)return '—';if(isImp(c))return 'Importé d\'Excel le '+impDate(c.pageId);return stamp(c.J?c.J.enregistreLe:c.horodatage)}
+function isDone(s){return s==='enregistre'||s==='rectifie'||s==='importe'}
 function dsChip(s){var x=DSTAT[s]||['—','no'];return '<span class="chip '+x[1]+'">'+x[0]+'</span>'}
 
 /* ---------- Icônes ---------- */
@@ -673,6 +682,8 @@ function empList(){
   return Object.keys(ks).sort(function(a,b){return memberName(a).localeCompare(memberName(b))});
 }
 function pagesOf(k){return pageIds().filter(function(p){return empKey(S.pages[p].responsable)===k})}
+function empPageIds(){return pageIds().filter(function(p){return !S.f.emp||empKey(S.pages[p].responsable)===S.f.emp})}
+function nbConf(dm,p){var st=latestState(p,dm,today());return st?comptes(st.boosts).renseignes:0}
 function fIds(){var f=S.f;return pageIds(f.page).filter(function(p){return !f.emp||empKey(S.pages[p].responsable)===f.emp})}
 function actifsOf(dm,ids,date){var c={actifs:0,pause:0,renseignes:0};ids.forEach(function(p){var st=latestState(p,dm,date);if(st){var x=comptes(st.boosts);c.actifs+=x.actifs;c.pause+=x.pause;c.renseignes+=x.renseignes}});return c}
 function kpi(icon,cls,title,sub,val,vcls,right,foot){
@@ -682,7 +693,7 @@ function filterBar(){
   var f=S.f, R=typeRange(f.type,f.ref,f.a,f.b);
   var per=f.type==='periode'?'<span class="row" style="gap:4px"><input type="date" id="fA" value="'+R.a+'" min="'+DEBUT+'" aria-label="Du"><span class="muted">au</span><input type="date" id="fB" value="'+R.b+'" min="'+DEBUT+'" aria-label="Au"></span>':rangeNav('f',R,R.a>DEBUT,true);
   return '<div class="fbar">'+seg('ftype',f.type,[['semaine','Semaine'],['mois','Mois'],['annee','Année'],['periode','Période']])+per+
-    '<label class="fl"><span>Page Facebook</span>'+sel('fPage',[['all','Toutes les pages']].concat(pageIds().map(function(p){return [p,S.pages[p].nom]})),f.page)+'</label>'+
+    '<label class="fl"><span>Page Facebook</span>'+sel('fPage',[['all',f.emp?'Toutes les pages de '+memberName(f.emp):'Toutes les pages']].concat(empPageIds().map(function(p){return [p,S.pages[p].nom]})),f.page)+'</label>'+
     '<label class="fl"><span>Employé</span>'+sel('fEmp',[['','Tous les employés']].concat(empList().map(function(k){return [k,memberName(k)]})),f.emp)+'</label></div>';
 }
 function viewDash(){
@@ -730,8 +741,8 @@ function viewDash(){
   /* Trois panneaux */
   var withEv=prows.filter(function(o){return o.ev!=null});
   var best=withEv.filter(function(o){return o.ev>0}).sort(function(a,b){return b.ev-a.ev}).slice(0,3);
-  var bad=withEv.filter(function(o){return o.ev<=-seuil()}).sort(function(a,b){return a.ev-b.ev}).slice(0,6);
-  var low=ids.map(function(p){var st=latestState(p,dm,t),c=st?comptes(st.boosts):null;return {p:p,c:c}}).filter(function(o){return o.c&&o.c.actifs<3}).sort(function(a,b){return a.c.actifs-b.c.actifs});
+  var bad=withEv.filter(function(o){return o.ev<=-seuil()&&nbConf(dm,o.p)>0}).sort(function(a,b){return a.ev-b.ev}).slice(0,6);
+  var low=ids.map(function(p){var st=latestState(p,dm,t),c=st?comptes(st.boosts):null;return {p:p,c:c}}).filter(function(o){return o.c&&o.c.renseignes>0&&o.c.actifs<3}).sort(function(a,b){return a.c.actifs-b.c.actifs});
   var rank=function(L,cls){return L.map(function(o,i){return '<tr class="click" data-page-sheet="'+o.p+'"><td><span class="rk '+cls+'">'+(i+1)+'</span></td><td class="pg">'+esc(S.pages[o.p].nom)+'</td><td>'+evo(o.x.b,o.z.b)+'</td><td class="n">'+nf(o.x.b)+'</td></tr>'}).join('')};
   var three='<div class="grid g3">'+
     '<div class="box">'+boxHead('trophy','Pages avec les meilleurs résultats','(plus forte progression)','','g')+'<div class="tb"><table><thead><tr><th>#</th><th>Page</th><th>Évolution</th><th class="n">Messages</th></tr></thead><tbody>'+(rank(best,'g')||'<tr><td colspan="4" class="empty">Aucune page en progression sur cette période.</td></tr>')+'</tbody></table></div></div>'+
@@ -746,7 +757,7 @@ function empRow(dm,k,a,b){
   pids.forEach(function(p){
     Object.keys(dm[p]||{}).forEach(function(d){var e=dm[p][d];if(empKey(e.auteur)===k&&(!last||e.horodatage>last))last=e.horodatage;if(d>=a&&d<=b)an+=e.anomalies.length});
     var aff=affectations(p).filter(function(z){return z.resp&&empKey(z.resp)===k&&!z.fin}).pop(), start=aff?aff.debut:DEBUT;
-    [addDays(t,-1),addDays(t,-2)].forEach(function(d){if(d>=start&&d>=DEBUT&&dayStatus(p,d,dm)!=='enregistre'&&dayStatus(p,d,dm)!=='rectifie')miss++});
+    [addDays(t,-1),addDays(t,-2)].forEach(function(d){if(d>=start&&d>=SAISIE_DEBUT&&dayStatus(p,d,dm)==='non')miss++});
   });
   var st=!pids.length?'none':miss>=2?'retard':(miss||an)?'verif':'actif';
   return {k:k,pids:pids,x:x,c:c,last:last,miss:miss,an:an,st:st};
@@ -754,7 +765,7 @@ function empRow(dm,k,a,b){
 var EST={actif:['Actif','ok'],verif:['À vérifier','wa'],retard:['En retard','ko'],none:['Sans page','no']};
 function suiviEmployes(dm,R){
   var t=today(), b=R.b>t?t:R.b, q=(S.eQ||'').toLowerCase();
-  var rows=empList().map(function(k){return empRow(dm,k,R.a,b)}).filter(function(o){return (!S.eStat||o.st===S.eStat)&&(!q||memberName(o.k).toLowerCase().indexOf(q)>=0)});
+  var rows=empList().filter(function(k){return !S.f.emp||k===S.f.emp}).map(function(k){return empRow(dm,k,R.a,b)}).filter(function(o){return (!S.eStat||o.st===S.eStat)&&(!q||memberName(o.k).toLowerCase().indexOf(q)>=0)});
   var html=rows.map(function(o,i){
     return '<tr><td>'+(i+1)+'</td><td class="pg">'+esc(memberName(o.k))+'</td><td style="white-space:normal;max-width:240px" class="muted">'+(o.pids.map(function(p){return esc(S.pages[p].nom)}).join(', ')||'—')+'</td>'+
       '<td class="n">'+(o.x.nB?nf(o.x.b):'—')+'</td><td class="n">'+(o.x.nR?nf(o.x.r):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td><td class="n'+(o.c.actifs<3*o.pids.length?' koc':'')+'">'+o.c.actifs+'</td>'+
@@ -771,17 +782,17 @@ function pageRows(dm,pids,R){
   return pids.map(function(p){
     var x=E.cur?rangeAgg(dm,E.cur.a,E.cur.b,[p]):rangeAgg(dm,'9','9',[p]), z=E.prev?rangeAgg(dm,E.prev.a,E.prev.b,[p]):null, st=latestState(p,dm,t), c=st?comptes(st.boosts):{actifs:0,pause:0,renseignes:0};
     var ev=x.nB&&z&&z.nB&&z.b?pct(x.b,z.b):null, an=0;Object.keys(dm[p]||{}).forEach(function(d){if(d>=R.a&&d<=R.b)an+=dm[p][d].anomalies.length});
-    var verif=(ev!=null&&ev<=-seuil())||an>0||c.actifs<3;
-    return {p:p,x:x,z:z,c:c,ev:ev,an:an,verif:verif};
+    var nob=c.renseignes===0, verif=!nob&&((ev!=null&&ev<=-seuil())||c.actifs<3)||an>0;
+    return {p:p,x:x,z:z,c:c,ev:ev,an:an,verif:verif,nob:nob};
   });
 }
 function recapPages(dm){
-  var R=typeRange(S.rpType,S.rpRef), pids=pageIds(S.rpPage).filter(function(p){return !S.f.emp||empKey(S.pages[p].responsable)===S.f.emp}), L=pageRows(dm,pids,R);
+  var R=typeRange(S.rpType,S.rpRef), pids=pageIds(S.rpPage==='all'||empPageIds().indexOf(S.rpPage)>=0?S.rpPage:'all').filter(function(p){return !S.f.emp||empKey(S.pages[p].responsable)===S.f.emp}), L=pageRows(dm,pids,R);
   var html=L.map(function(o,i){
     return '<tr><td>'+(i+1)+'</td><td class="pg">'+esc(S.pages[o.p].nom)+'</td><td>'+esc(memberName(S.pages[o.p].responsable))+'</td><td class="n">'+(o.x.nB?nf(o.x.b):'—')+'</td><td class="n">'+(o.x.nR?nf(o.x.r):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td>'+
-      '<td class="n">'+o.c.actifs+'</td><td class="n'+(o.c.pause?' koc':'')+'">'+o.c.pause+'</td><td class="c">'+evo(o.x.nB?o.x.b:null,o.z&&o.z.nB?o.z.b:null)+'</td><td>'+(!o.x.nB&&!o.x.nR?'<span class="chip no">Pas de données</span>':o.verif?'<span class="chip wa">À vérifier</span>':'<span class="chip ok">Normal</span>')+'</td><td>'+eyeBtn('data-page-sheet="'+o.p+'"')+'</td></tr>';
+      '<td class="n">'+o.c.actifs+'</td><td class="n'+(o.c.pause?' koc':'')+'">'+o.c.pause+'</td><td class="c">'+evo(o.x.nB?o.x.b:null,o.z&&o.z.nB?o.z.b:null)+'</td><td>'+(o.nob&&!o.an?'<span class="chip no nodot">Aucun boost configuré</span>':!o.x.nB&&!o.x.nR?'<span class="chip no">Pas de données</span>':o.verif?'<span class="chip wa">À vérifier</span>':'<span class="chip ok">Normal</span>')+'</td><td>'+eyeBtn('data-page-sheet="'+o.p+'"')+'</td></tr>';
   }).join('')||'<tr><td colspan="11" class="empty">Aucune page.</td></tr>';
-  return '<div class="box">'+boxHead('file','Récapitulatif détaillé par page Facebook','','<div class="row"><label class="fl"><span>Page Facebook</span>'+sel('rpPage',[['all','Toutes les pages']].concat(pageIds().map(function(p){return [p,S.pages[p].nom]})),S.rpPage)+'</label>'+
+  return '<div class="box">'+boxHead('file','Récapitulatif détaillé par page Facebook','','<div class="row"><label class="fl"><span>Page Facebook</span>'+sel('rpPage',[['all',S.f.emp?'Toutes les pages de '+memberName(S.f.emp):'Toutes les pages']].concat(empPageIds().map(function(p){return [p,S.pages[p].nom]})),S.rpPage)+'</label>'+
     '<label class="fl"><span>Période</span>'+sel('rpType',[['semaine','Semaine'],['mois','Mois'],['annee','Année']],S.rpType)+'</label>'+rangeNav('rp',R,R.a>DEBUT,true)+
     '<button type="button" class="primary" id="exportPages">'+ico('dl','ic" style="color:#fff')+' Exporter</button></div>')+
     '<div class="tb"><table><thead><tr><th>#</th><th>Page Facebook</th><th>Employé</th><th class="n">Total boost</th><th class="n">Total réels</th><th class="n">Écart</th><th class="n">Boosts actifs</th><th class="n">Boosts en pause</th><th class="c">Évolution</th><th>Statut</th><th>Action</th></tr></thead><tbody>'+html+'</tbody></table></div>'+
@@ -791,7 +802,7 @@ function csvCell(v){v=v==null?'':String(v);return /[";\n]/.test(v)?'"'+v.replace
 function exportPages(){
   var dm=dayMap(), R=typeRange(S.rpType,S.rpRef), pids=pageIds(S.rpPage), L=pageRows(dm,pids,R);
   var lines=[['Page','Employé','Du','Au','Total boost','Total réels','Écart','Boosts actifs','Boosts en pause','Évolution %','Statut'].join(';')];
-  L.forEach(function(o){lines.push([S.pages[o.p].nom,memberName(S.pages[o.p].responsable),fmtD(R.a),fmtD(R.b),o.x.nB?o.x.b:'',o.x.nR?o.x.r:'',diffOf(o.x)==null?'':diffOf(o.x),o.c.actifs,o.c.pause,o.ev==null?'':o.ev.toFixed(1).replace('.',','),!o.x.nB&&!o.x.nR?'Pas de données':o.verif?'À vérifier':'Normal'].map(csvCell).join(';'))});
+  L.forEach(function(o){lines.push([S.pages[o.p].nom,memberName(S.pages[o.p].responsable),fmtD(R.a),fmtD(R.b),o.x.nB?o.x.b:'',o.x.nR?o.x.r:'',diffOf(o.x)==null?'':diffOf(o.x),o.c.actifs,o.c.pause,o.ev==null?'':o.ev.toFixed(1).replace('.',','),o.nob&&!o.an?'Aucun boost configuré':!o.x.nB&&!o.x.nR?'Pas de données':o.verif?'À vérifier':'Normal'].map(csvCell).join(';'))});
   saveFile('recapitulatif-pages-'+R.a+'.csv','﻿'+lines.join('\r\n'),'exp');
 }
 function saveFile(name,text,key){
@@ -825,7 +836,7 @@ function gridModel(pid){
   var prev=cumBefore(pid,cols[0]), M={pid:pid,cols:{},order:cols,rows:rows,per:0,perN:0};
   cols.forEach(function(d){
     var c=pm[d], key=pid+'_'+d, ed=S.ed[key], br=brouOf(pid,d), rec=!!(c&&(c.J||c.boostsDuJour||c.totaux.reels!=null));
-    var lock=d>t||d<DEBUT||(rec&&!admin);
+    var lock=d>t||d<DEBUT||(rec&&!admin)||(d<SAISIE_DEBUT&&!admin);
     var cm={};if(c)c.counters.forEach(function(b){cm[b.id]=b.messages});
     var col={date:d,key:key,rec:rec,lock:lock,c:c,br:br,cells:{},tot:null,r:null,boosts:[],an:[]};
     var any=false,tot=0;
@@ -876,11 +887,13 @@ function stateHtml(col){
   if(s&&s.st==='err')return '<span class="when koc">Brouillon non sauvegardé</span>';
   if(col.br&&!col.rec)return '<span class="when">Brouillon sauvegardé<br>'+hmOf(col.br.majLe)+'</span>';
   if(col.date>today())return '<span class="when">Heure : —</span>';
+  if(!col.rec&&col.date<SAISIE_DEBUT)return '<span class="when">Pas de relevé Excel</span>';
   if(!col.rec&&col.date<today())return '<span class="when koc">Non effectué</span>';
   return '<span class="when">Heure : —</span>';
 }
 function savedHtml(col){
   var c=col.c, J=c&&c.J, r=J&&J.rectifs||[];
+  if(isImp(c))return '<div class="saved" style="color:var(--pro)">'+(r.length?'✓ Rectifié':'✓ Importé')+'<span class="when">depuis Excel<br>le '+impDate(c.pageId)+'</span></div>';
   var when=J?J.enregistreLe:c&&c.horodatage, who=J?(J.auteurNom||memberName(J.auteur)):memberName(c&&c.auteur);
   return '<div class="saved'+(r.length?' rect':'')+'">'+(r.length?'✓ Rectifié':'✓ Enregistré')+'<b class="num">'+(when?stamp(when).replace(' ','<br>'):'—')+'</b><span class="when">'+esc(who)+'</span></div>';
 }
@@ -917,7 +930,7 @@ function viewSaisie(){
     var col=M.cols[d];
     if(col.rec&&isAdminMode())return '<td>'+savedHtml(col)+'<button type="button" class="small savebtn" data-rect="'+pid+'|'+d+'">Rectifier</button></td>';
     if(col.rec)return '<td>'+savedHtml(col)+'</td>';
-    if(d>t||d<DEBUT)return '<td><button type="button" class="small savebtn" disabled>'+ico('save','ic" style="width:12px;height:12px')+' Enregistrer</button>'+stateHtml(col)+'</td>';
+    if(col.lock)return '<td><button type="button" class="small savebtn" disabled>'+ico('save','ic" style="width:12px;height:12px')+' Enregistrer</button>'+stateHtml(col)+'</td>';
     return '<td><button type="button" class="small savebtn darkb" data-commit="'+pid+'|'+d+'">Enregistrer</button><div id="st_'+d+'">'+stateHtml(col)+'</div></td>';
   }).join('')+'</tr>';
   var grid='<div class="tb" style="border:0"><table class="sgrid"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>';
@@ -1011,7 +1024,7 @@ function doRect(pid,d,motif){
   var apres={boosts:cleanBoosts(col.boosts),reels:col.r,totalBoost:col.tot};
   var r={par:S.me,parNom:'Administrateur',le:now,motif:motif,avant:avant,apres:apres};
   var doc=J?Object.assign({},J,{boosts:apres.boosts,reels:col.r,totalBoost:col.tot,ecart:col.ec,statut:'rectifie',rectifs:(J.rectifs||[]).concat([r])}):
-    {pageId:pid,date:d,auteur:c.auteur,auteurNom:memberName(c.auteur),responsable:S.pages[pid].responsable||null,boosts:apres.boosts,reels:col.r,totalBoost:col.tot,ecart:col.ec,statut:'rectifie',enregistreLe:c.horodatage,source:c.import?'import':'saisie',anomalies:[],rectifs:[r]};
+    {pageId:pid,date:d,auteur:c.auteur,auteurNom:memberName(c.auteur),responsable:S.pages[pid].responsable||null,boosts:apres.boosts,reels:col.r,totalBoost:col.tot,ecart:col.ec,statut:'rectifie',enregistreLe:c.import?null:c.horodatage,importeLe:c.import?(S.histImp||{})[pid]||null:null,dateReleve:d,source:c.import?'import':'saisie',anomalies:[],rectifs:[r]};
   S.modal=null; render();
   S.db.doc('jours/'+key).set(doc).then(function(){
     S.jours[key]=doc; delete S.ed[key]; bump();
@@ -1057,7 +1070,7 @@ function anomaliesOf(dm,pids,a,b){
       var e=c.totaux.ecart,mb=c.totaux.messagesBoosts;
       if(e!=null&&Math.abs(e)>=Math.max(5,(mb||0)*0.2))out.push({p:p,d:k,type:'ecart',boost:'Tous les boosts',desc:e<0?'Messages réels supérieurs au total des messages boost':'Messages boost très supérieurs aux messages réels',av:mb,ap:c.totaux.reels});
     });
-    for(var k=a<DEBUT?DEBUT:a;k<=b&&k<t;k=addDays(k,1)){if(dayStatus(p,k,dm)==='non'&&respAt(p,k))out.push({p:p,d:k,type:'manquant',boost:'—',desc:'Jour non enregistré',av:null,ap:null})}
+    for(var k=a<SAISIE_DEBUT?SAISIE_DEBUT:a;k<=b&&k<t;k=addDays(k,1)){if(dayStatus(p,k,dm)==='non'&&respAt(p,k))out.push({p:p,d:k,type:'manquant',boost:'—',desc:'Jour non enregistré',av:null,ap:null})}
   });
   return out.sort(function(x,y){return x.d<y.d?1:x.d>y.d?-1:0});
 }
@@ -1134,12 +1147,12 @@ function histRow(p,d,dm,withPage,withEmp){
   var who=c?(c.J?(c.J.auteurNom||memberName(c.J.auteur)):memberName(c.auteur)):memberName(respAt(p,d));
   return '<tr><td>'+jc(d)+' '+fmtD(d)+'</td>'+(withPage?'<td class="pg">'+esc(S.pages[p].nom)+'</td>':'')+(withEmp?'<td>'+esc(who)+'</td>':'')+
     '<td class="n">'+(c&&c.totaux.messagesBoosts!=null?nf(c.totaux.messagesBoosts):'—')+'</td><td class="n">'+(c&&c.totaux.reels!=null?nf(c.totaux.reels):'—')+'</td><td class="n">'+sgSpan(c?c.totaux.ecart:null)+'</td>'+
-    '<td class="n">'+(c?c.totaux.actifs:'—')+'</td><td class="num" style="font-size:.76rem">'+(when?stamp(when):'—')+'</td><td>'+dsChip(s)+(c&&c.anomalies.length?' <span class="chip ko nodot">Anomalie</span>':'')+'</td>'+
+    '<td class="n">'+(c?c.totaux.actifs:'—')+'</td><td class="num" style="font-size:.76rem">'+(c?whenTxt(c):'—')+'</td><td>'+dsChip(s)+(c&&c.anomalies.length?' <span class="chip ko nodot">Anomalie</span>':'')+'</td>'+
     '<td>'+eyeBtn('data-day-detail="'+p+'|'+d+'"','Voir détails')+'</td></tr>';
 }
 function histStats(dm,pairs){
   var n=0,miss=0,b=0,r=0,nb=0,nr=0,an=0,rc=0;
-  pairs.forEach(function(x){var c=(dm[x.p]||{})[x.d],s=dayStatus(x.p,x.d,dm);if(s==='enregistre'||s==='rectifie')n++;if(s==='non')miss++;if(s==='rectifie')rc++;if(c){if(c.totaux.messagesBoosts!=null){b+=c.totaux.messagesBoosts;nb++}if(c.totaux.reels!=null){r+=c.totaux.reels;nr++}an+=c.anomalies.length}});
+  pairs.forEach(function(x){var c=(dm[x.p]||{})[x.d],s=dayStatus(x.p,x.d,dm);if(isDone(s))n++;if(s==='non')miss++;if(s==='rectifie')rc++;if(c){if(c.totaux.messagesBoosts!=null){b+=c.totaux.messagesBoosts;nb++}if(c.totaux.reels!=null){r+=c.totaux.reels;nr++}an+=c.anomalies.length}});
   return {n:n,miss:miss,b:nb?b:null,r:nr?r:null,an:an,rc:rc};
 }
 function statsHtml(st){
@@ -1157,7 +1170,7 @@ function boostEvents(pid){
 }
 function viewPageSheet(){
   var pid=S.sheetPid; if(!pid||!S.pages[pid]||!canSeePage(pid))return '<div class="box"><p class="empty">Page introuvable.</p></div>';
-  var dm=dayMap(), p=S.pages[pid], t=today(), H=S.hist, F=histFilter('h',H), days=daysDesc(F.R.a,F.R.b), pairs=days.map(function(d){return {p:pid,d:d}});
+  var dm=dayMap(), p=S.pages[pid], t=today(), H=S.hist, F=histFilter('h',H), days=daysDesc(F.R.a,F.R.b).filter(function(d){return !H.autP||authorOf((dm[pid]||{})[d])===H.autP}), pairs=days.map(function(d){return {p:pid,d:d}});
   var aff=affectations(pid), anciens=aff.filter(function(a){return a.fin}).map(function(a){return memberName(a.resp)+' ('+fmtD(a.debut)+' – '+fmtD(a.fin)+')'});
   var st=latestState(pid,dm,t), C=st?comptes(st.boosts):{actifs:0,pause:0,renseignes:0}, ds=Object.keys(dm[pid]||{}).sort(), last=ds.length?dm[pid][ds[ds.length-1]]:null;
   var info='<div class="kv"><div><span class="label">Employé actuel</span><b>'+esc(memberName(p.responsable))+'</b></div><div><span class="label">Anciens employés</span><b>'+(anciens.length?esc(anciens.join(', ')):'—')+'</b></div><div><span class="label">Début du suivi</span><b>'+fmtD(DEBUT)+'</b></div>'+
@@ -1167,13 +1180,14 @@ function viewPageSheet(){
   var ev=boostEvents(pid).slice(0,40);
   var evh='<div class="tb" style="max-height:260px;overflow-y:auto"><table><thead><tr><th>Boost</th><th>Événement</th><th>À partir du</th><th>Enregistré le</th><th>Par</th></tr></thead><tbody>'+(ev.map(function(e){return '<tr><td class="pg">'+esc(e.nom)+'</td><td>'+esc(e.lab)+'</td><td>'+fmtD(e.date)+'</td><td class="num" style="font-size:.76rem">'+(e.le?stamp(e.le):'—')+'</td><td>'+esc(e.par)+'</td></tr>'}).join('')||'<tr><td colspan="5" class="empty">Aucun changement de statut depuis le '+fmtD(DEBUT)+'.</td></tr>')+'</tbody></table></div>';
   return '<div class="grid"><div class="box">'+boxHead('fb','Historique de la page '+esc(p.nom),'','<button type="button" data-back="1">'+ico('left','ic')+' Retour</button>')+info+'</div>'+
-    '<div class="fbar">'+F.html+'</div>'+
+    '<div class="fbar">'+F.html+(S.owner?'<label class="fl"><span>Auteur réel de la saisie</span>'+sel('hAutP',[['','Tous les auteurs']].concat(empList().map(function(k){return [k,memberName(k)]})),H.autP||'')+'</label>':'')+'</div>'+
     '<div class="box">'+statsHtml(histStats(dm,pairs))+'<div class="tb"><table><thead><tr><th>Date</th><th>Employé</th><th class="n">Boost</th><th class="n">Réels</th><th class="n">Écart</th><th class="n">Boosts actifs</th><th>Heure d\'enregistrement</th><th>Statut</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
     '<div class="grid g2"><div class="box chart">'+boxHead('chart','Progression','',seg('chartm',S.chartM,[['bv','Boost vs réels'],['ecart','Écart journalier']]))+chartBlock(sr,S.chartM,620,220)+'</div><div class="box">'+boxHead('layers','Historique des statuts des boosts')+evh+'</div></div></div>';
 }
 /* Fiche employé (administrateur) */
-function empPairs(k,a,b,page){
-  var out=[];pageIds().forEach(function(p){if(page&&page!==p)return;daysDesc(a,b).forEach(function(d){var c=(dayMap()[p]||{})[d],au=c&&c.J?empKey(c.J.auteur):null,r=au&&/^inv_/.test(au)?au:respAt(p,d);if(r?empKey(r)===k:(c&&empKey(c.auteur)===k))out.push({p:p,d:d})})});
+function authorOf(c){return c&&!isImp(c)?empKey(c.J?c.J.auteur:c.auteur):null}
+function empPairs(k,a,b,page,aut){
+  var out=[];pageIds().forEach(function(p){if(page&&page!==p)return;daysDesc(a,b).forEach(function(d){var c=(dayMap()[p]||{})[d];if(aut==='auteur'){if(authorOf(c)===k)out.push({p:p,d:d});return}var au=c&&c.J?empKey(c.J.auteur):null,r=au&&/^inv_/.test(au)?au:respAt(p,d);if(r?empKey(r)===k:(c&&empKey(c.auteur)===k))out.push({p:p,d:d})})});
   return out.sort(function(x,y){return x.d<y.d?1:x.d>y.d?-1:x.p<y.p?-1:1});
 }
 function viewEmpSheet(){
@@ -1183,8 +1197,8 @@ function viewEmpSheet(){
   var top='<div class="box">'+boxHead('user',esc(memberName(k)),'Fiche employé','<button type="button" data-back="1">'+ico('left','ic')+' Retour</button>')+
     '<div class="subtabs">'+[['dash','Tableau de bord de l\'employé'],['hist','Historique de l\'employé']].map(function(x){return '<button type="button" data-emptab="'+x[0]+'" aria-pressed="'+(tab===x[0])+'">'+x[1]+'</button>'}).join('')+'</div></div>';
   if(tab==='dash')return '<div class="grid">'+top+viewEmpDash(cur,true)+'</div>';
-  var H=S.hist, F=histFilter('h',H), pairs=empPairs(k,F.R.a,F.R.b,H.page), all=empPairs(k,DEBUT,today());
-  var lastE=null;all.forEach(function(x){var c=(dm[x.p]||{})[x.d];if(c&&(!lastE||c.horodatage>lastE))lastE=c.horodatage});
+  var H=S.hist, F=histFilter('h',H), pairs=empPairs(k,F.R.a,F.R.b,H.page,H.aut), all=empPairs(k,DEBUT,today());
+  var lastE=null;all.forEach(function(x){var c=(dm[x.p]||{})[x.d];if(c&&!isImp(c)&&(!lastE||c.horodatage>lastE))lastE=c.horodatage});
   var first=null;Object.keys(S.pages).forEach(function(p){affectations(p).forEach(function(a){if(empKey(a.resp)===k&&(!first||a.debut<first))first=a.debut})});
   var sa=histStats(dm,all);
   var info='<div class="kv"><div><span class="label">Pages actuelles</span><b>'+(cur.map(function(p){return esc(S.pages[p].nom)}).join(', ')||'—')+'</b></div><div><span class="label">Anciennes pages</span><b>'+(prev.map(function(p){return esc(S.pages[p].nom)}).join(', ')||'—')+'</b></div>'+
@@ -1192,7 +1206,7 @@ function viewEmpSheet(){
   var ps=cur.concat(prev);
   var rows=pairs.map(function(x){return histRow(x.p,x.d,dm,true,false)}).join('')||'<tr><td colspan="9" class="empty">Aucun jour sur cette période.</td></tr>';
   var sr=series(dm,H.page?[H.page]:ps,F.R.a<DEBUT?DEBUT:F.R.a,F.R.b>today()?today():F.R.b);
-  return '<div class="grid">'+top+'<div class="box">'+info+'</div><div class="fbar"><label class="fl"><span>Page</span>'+sel('hPage',[['','Toutes ses pages']].concat(ps.map(function(p){return [p,S.pages[p].nom]})),H.page)+'</label>'+F.html+'</div>'+
+  return '<div class="grid">'+top+'<div class="box">'+info+'</div><div class="fbar"><label class="fl"><span>Afficher</span>'+sel('hAut',[['','Pages qui lui étaient attribuées'],['auteur','Saisies faites par lui / elle (auteur réel)']],H.aut||'')+'</label><label class="fl"><span>Page</span>'+sel('hPage',[['','Toutes ses pages']].concat(ps.map(function(p){return [p,S.pages[p].nom]})),H.page)+'</label>'+F.html+'</div>'+
     '<div class="box">'+statsHtml(histStats(dm,pairs))+'<div class="tb"><table><thead><tr><th>Date</th><th>Page</th><th class="n">Boost</th><th class="n">Réels</th><th class="n">Écart</th><th class="n">Boosts actifs</th><th>Heure d\'enregistrement</th><th>Statut</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
     '<div class="box chart">'+boxHead('chart','Progression','',seg('chartm',S.chartM,[['bv','Boost vs réels'],['ecart','Écart journalier']]))+chartBlock(sr,S.chartM,900,240)+'</div></div>';
 }
@@ -1206,14 +1220,14 @@ function dayDetail(pid,d){
   var dem=allDemandes().filter(function(x){return x.pageId===pid&&x.date===d});
   var html='<div class="bh"><h2>'+ico('cal','ic')+esc(S.pages[pid].nom)+' · '+dLong(d)+'</h2><button type="button" data-close="1">Fermer</button></div>'+
     '<div class="kv"><div><span class="label">Statut</span><b>'+dsChip(s)+'</b></div><div><span class="label">Total messages boost</span><b class="num">'+nf(c&&c.totaux.messagesBoosts)+'</b></div><div><span class="label">Messages réels</span><b class="num">'+nf(c&&c.totaux.reels)+'</b></div><div><span class="label">Écart</span><b class="num">'+sg(c&&c.totaux.ecart)+'</b></div>'+
-    '<div><span class="label">Enregistré le (heure exacte)</span><b class="num">'+(J?stamp(J.enregistreLe):c?stamp(c.horodatage):'—')+'</b></div><div><span class="label">Par</span><b>'+esc(c?(J?J.auteurNom||memberName(J.auteur):memberName(c.auteur)):'—')+'</b></div>'+
+    '<div><span class="label">'+(isImp(c)?'Origine':'Enregistré le (heure exacte)')+'</span><b class="num">'+whenTxt(c)+'</b></div><div><span class="label">Date du relevé</span><b>'+fmtD(d)+'</b></div><div><span class="label">Par</span><b>'+esc(c?(J?J.auteurNom||memberName(J.auteur):memberName(c.auteur)):'—')+'</b></div>'+
     '<div><span class="label">Brouillon créé / dernière sauvegarde</span><b class="num" style="font-size:.78rem">'+(J&&J.brouillonCreeLe?stamp(J.brouillonCreeLe)+'<br>'+stamp(J.brouillonMajLe):br?stamp(br.creeLe)+'<br>'+stamp(br.majLe):'—')+'</b></div>'+
     '<div><span class="label">Boosts actifs ce jour</span><b>'+(c?c.totaux.actifs+' / '+c.totaux.renseignes:'—')+'</b></div></div>'+
     '<div class="tb"><table><thead><tr><th>Boost</th><th>Statut ce jour</th><th class="n">Compteur cumulé</th><th class="n">Référence (compteur précédent)</th><th class="n">Nouveaux messages</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     (c&&c.anomalies.length?'<div class="note r">'+ico('warn')+'<span>Anomalie : '+c.anomalies.map(function(a){return esc(a.nom)+' passe de '+nf(a.prev)+' à '+nf(a.cur)}).join(' ; ')+'. Ces messages ne sont pas comptés.</span></div>':'')+
     (rect?'<h3>Rectifications</h3><div class="tb"><table><thead><tr><th>Le</th><th>Par</th><th>Motif</th><th class="n">Avant (boost / réels)</th><th class="n">Après</th></tr></thead><tbody>'+rect+'</tbody></table></div><div class="muted" style="font-size:.74rem">L\'heure d\'enregistrement initiale est conservée.</div>':'')+
     (dem.length?'<h3>Demandes</h3>'+dem.map(function(x){return '<div class="note '+(x.statut==='traitee'?'g':'')+'"><span><b>'+esc(x.auteurNom||memberName(x.auteur))+' · '+stampS(x.creeLe)+'</b> — '+esc(x.message)+(x.reponse?'<br>Réponse : '+esc(x.reponse):'')+'</span></div>'}).join(''):'')+
-    '<div class="row" style="justify-content:flex-end">'+(S.owner?'<button type="button" data-goto-saisie="'+pid+'|'+d+'">'+ico('edit','ic')+' Ouvrir dans la saisie</button>':(s==='enregistre'||s==='rectifie')?'<button type="button" class="primary" data-askrect="'+pid+'|'+d+'">Demander une rectification</button>':'')+'</div>';
+    '<div class="row" style="justify-content:flex-end">'+(S.owner?'<button type="button" data-goto-saisie="'+pid+'|'+d+'">'+ico('edit','ic')+' Ouvrir dans la saisie</button>':isDone(s)?'<button type="button" class="primary" data-askrect="'+pid+'|'+d+'">Demander une rectification</button>':'')+'</div>';
   S.modal={type:'detail',html:html}; render();
 }
 /* Demandes de l'employé (rectification ou anomalie signalée) */
@@ -1690,8 +1704,8 @@ document.addEventListener('input',function(ev){
 document.addEventListener('change',function(ev){
   var el=ev.target, ds=el.dataset, v=el.value;
   if(ds.rdate){if(!v)return;var id=ds.rdate;if(id==='f')S.f.ref=v;else if(id==='rp')S.rpRef=v;else if(id==='e')S.eRef=v;else if(id==='h')S.hist.ref=v;render();return}
-  var map={fPage:function(){S.f.page=v},fEmp:function(){S.f.emp=v},fA:function(){S.f.a=v},fB:function(){S.f.b=v},rpPage:function(){S.rpPage=v},rpType:function(){S.rpType=v},eStat:function(){S.eStat=v},
-    ePage:function(){S.ePid=v},szPage:function(){S.sz.pid=v;S.ePid=v},szA:function(){S.sz.a=v},szB:function(){S.sz.b=v},hPage:function(){S.hist.page=v},hA:function(){S.hist.a=v},hB:function(){S.hist.b=v},anT:function(){S.anT=v},
+  var map={fPage:function(){S.f.page=v},fEmp:function(){S.f.emp=v;if(S.f.page!=='all'&&empPageIds().indexOf(S.f.page)<0)S.f.page='all';if(S.rpPage!=='all'&&empPageIds().indexOf(S.rpPage)<0)S.rpPage='all'},fA:function(){S.f.a=v},fB:function(){S.f.b=v},rpPage:function(){S.rpPage=v},rpType:function(){S.rpType=v},eStat:function(){S.eStat=v},
+    ePage:function(){S.ePid=v},szPage:function(){S.sz.pid=v;S.ePid=v},szA:function(){S.sz.a=v},szB:function(){S.sz.b=v},hPage:function(){S.hist.page=v},hAut:function(){S.hist.aut=v},hAutP:function(){S.hist.autP=v},hA:function(){S.hist.a=v},hB:function(){S.hist.b=v},anT:function(){S.anT=v},
     dashPage:function(){S.page=v},recapPage:function(){S.page=v},calPage:function(){S.page=v},dA:function(){S.pa=v||null},dB:function(){S.pb=v||null},rA:function(){S.ra=v||null},rB:function(){S.rb=v||null},rEmp:function(){S.rEmp=v},rBoost:function(){S.rBoost=v},rStat:function(){S.rStat=v}};
   if(map[el.id]){map[el.id]();render();return}
   if(el.id==='seuilIn'){var n=Math.round(+v);if(n>=1&&n<=90)saveCfg({seuil:n});return}
@@ -1743,7 +1757,7 @@ function watch(){
       out.push({id:j.id,pageId:h.pageId,auteur:'import',fromHist:true,horodatage:j.horodatage,date:j.date,jour:j.jour,heure:j.heure,mode:'cumul',totaux:j.totaux,
         boosts:(j.boosts||[]).map(function(b){return{id:b.id,nom:b.nom||'Boost '+b.id.slice(1),statut:b.statut||'actif',messages:b.messages,nouveaux:b.nouveaux}})});
     })});
-    var hp={};out.forEach(function(e){hp[e.pageId]=1});S.histPages=hp;
+    var hp={},hi={};out.forEach(function(e){hp[e.pageId]=1});snap.docs.forEach(function(d){var h=d.data();hi[h.pageId]=h.importeLe||null});S.histPages=hp;S.histImp=hi;
     S.entries.historique=out; bump(); soft();
   },function(){});
 }
