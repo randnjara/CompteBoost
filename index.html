@@ -451,7 +451,7 @@ function dayMap(){
 function cumBefore(pid,date){
   dayMap(); var L=S.cumAt[pid]||[], r={};
   for(var i=0;i<L.length;i++){if(L[i].date>=date)break;r=L[i].cum}
-  return r;
+  return Object.assign({},r); /* copie : la grille ne doit pas modifier les compteurs gardés */
 }
 function pageIds(filter){return Object.keys(S.pages).filter(function(id){return !S.pages[id].archivee&&(filter==null||filter==='all'||filter===id)}).sort(function(a,b){return S.pages[a].nom.localeCompare(S.pages[b].nom)})}
 function latestState(pid,dm,upTo){
@@ -836,7 +836,8 @@ function gridModel(pid){
   var prev=cumBefore(pid,cols[0]), M={pid:pid,cols:{},order:cols,rows:rows,per:0,perN:0};
   cols.forEach(function(d){
     var c=pm[d], key=pid+'_'+d, ed=S.ed[key], br=brouOf(pid,d), rec=!!(c&&(c.J||c.boostsDuJour||c.totaux.reels!=null));
-    var lock=d>t||d<DEBUT||(rec&&!admin)||(d<SAISIE_DEBUT&&!admin);
+    /* Saisie = employé seulement ; l'administrateur ne peut que rectifier un jour déjà enregistré */
+    var lock=d>t||d<DEBUT||(S.owner?(!admin||!rec):(rec||d<SAISIE_DEBUT));
     var cm={};if(c)c.counters.forEach(function(b){cm[b.id]=b.messages});
     var col={date:d,key:key,rec:rec,lock:lock,c:c,br:br,cells:{},tot:null,r:null,boosts:[],an:[]};
     var any=false,tot=0;
@@ -889,6 +890,7 @@ function stateHtml(col){
   if(col.date>today())return '<span class="when">Heure : —</span>';
   if(!col.rec&&col.date<SAISIE_DEBUT)return '<span class="when">Pas de relevé Excel</span>';
   if(!col.rec&&col.date<today())return '<span class="when koc">Non effectué</span>';
+  if(S.owner&&!col.rec)return '<span class="when">En attente de l\'employé</span>';
   return '<span class="when">Heure : —</span>';
 }
 function savedHtml(col){
@@ -936,7 +938,7 @@ function viewSaisie(){
   var grid='<div class="tb" style="border:0"><table class="sgrid"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>';
   var bottom='<div class="grid g2e"><div class="kpi">'+tile('send','l')+'<div><div class="t">Total messages · période affichée</div><span class="v b" id="szPer">'+(M.perN?nf(M.per):'—')+'</span></div></div>'+
     '<div class="kpi">'+tile('layers','l')+'<div><div class="t">Boosts actifs</div><span class="v g">'+M.actifs+'</span></div></div></div>';
-  var note='<div class="note">'+ico('info')+'<span>Tes chiffres sont gardés automatiquement en brouillon pendant la saisie. Clique sur <b>Enregistrer</b> sous le jour pour le valider : l\'heure (Madagascar, UTC+3, selon l\'horloge de ton appareil) est notée et le jour est verrouillé. '+(S.owner?'En mode Administrateur, tu peux rectifier un jour enregistré avec un motif ; la valeur d\'origine est conservée.':'Seul l\'administrateur peut rectifier un jour enregistré : utilise « Demander une rectification » dans l\'historique de la page.')+'</span></div>';
+  var note=S.owner?'<div class="note">'+ico('info')+'<span>La saisie est faite par les employés. En mode <b>Administrateur</b>, tu peux seulement rectifier un jour déjà enregistré : change le chiffre puis clique sur <b>Rectifier</b> et indique le motif. La valeur d\'origine est conservée. Le mode <b>Employé</b> montre la grille telle que l\'employé la voit (lecture seule).</span></div>':'<div class="note">'+ico('info')+'<span>Tes chiffres sont gardés automatiquement en brouillon pendant la saisie. Clique sur <b>Enregistrer</b> sous le jour pour le valider : l\'heure (Madagascar, UTC+3, selon l\'horloge de ton appareil) est notée et le jour est verrouillé. '+(S.owner?'En mode Administrateur, tu peux rectifier un jour enregistré avec un motif ; la valeur d\'origine est conservée.':'Seul l\'administrateur peut rectifier un jour enregistré : utilise « Demander une rectification » dans l\'historique de la page.')+'</span></div>';
   var msg='<div class="msg '+((S.msgs.sz||{}).c||'')+'" role="status">'+((S.msgs.sz||{}).t||'')+'</div>';
   return '<div class="box" style="max-width:1100px">'+head+who+tog+nav+bar+grid+msg+bottom+note+
     '<div class="row"><button type="button" data-page-sheet="'+pid+'">'+ico('hist','ic')+' Historique de la page</button></div></div>';
@@ -964,6 +966,7 @@ function editCell(pid,d,field,bid,val){
   refreshGrid(pid);
 }
 function saveDraft(pid,d){
+  if(S.owner)return;
   var key=pid+'_'+d, ed=S.ed[key]; if(!ed||!S.db||!S.me)return;
   var mine=(S.brou[S.me]||{})[key], now=new Date().toISOString();
   var base=mine||{}, b=Object.assign({},base.boosts||{});
@@ -982,6 +985,7 @@ function checkDay(pid,d){
   return {M:M,col:col,err:err};
 }
 function askCommit(pid,d){
+  if(S.owner){S.msgs.sz={t:'La saisie est faite par l\'employé. L\'administrateur peut seulement rectifier un jour enregistré.',c:'err'};render();return}
   var k=checkDay(pid,d);
   if(k.err.length){S.msgs.sz={t:dLong(d)+' : indique '+k.err.slice(0,3).join(', ')+'.',c:'err'};render();return}
   var col=k.col;
@@ -993,6 +997,7 @@ function askCommit(pid,d){
 }
 function cleanBoosts(L){return L.map(function(b){return {id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}})}
 function commitDay(pid,d){
+  if(S.owner)return;
   var k=checkDay(pid,d), col=k.col, key=pid+'_'+d, ref=S.db.doc('jours/'+key), now=new Date().toISOString(), br=brouOf(pid,d);
   S.modal=null; S.msgs.sz={t:'Enregistrement en cours…',c:''}; render();
   ref.get().then(function(s){
