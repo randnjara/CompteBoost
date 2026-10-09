@@ -124,26 +124,52 @@ function showLogin(mode,msg){
   else setTimeout(function(){var i=document.getElementById('cbId');if(i)i.focus()},30);
 }
 function setMsg(t){var m=box&&box.querySelector('.cb-msg');if(m)m.textContent=t}
+function net(e){return /fetch|network|load failed|retryable|timed? ?out/i.test(String(e&&(e.message||e.name)||''))}
+function retry(fn,n){return fn().catch(function(e){if(n>0&&net(e))return new Promise(function(r){setTimeout(r,1500)}).then(function(){return retry(fn,n-1)});throw e})}
+function signIn(id,pw){return sb.auth.signInWithPassword({email:emailOf(id),password:pw}).then(function(r){if(r.error)throw r.error;return r})}
+function nice(e,mode){
+  var m=String(e&&e.message||'');
+  if(net(e))return 'La base de données ne répond pas. Vérifie Internet, désactive la traduction de la page et les bloqueurs de publicité, puis réessaie.';
+  if(/invalid/i.test(m))return mode==='admin'?'Ce compte existe déjà avec un autre mot de passe. Clique sur « Retour à la connexion » et connecte-toi.':'Identifiant ou mot de passe incorrect.';
+  return m||'Connexion impossible.';
+}
 function submit(mode){
   var id=document.getElementById('cbId').value, pw=document.getElementById('cbPw').value;
   setMsg('Un instant…');
   var p=mode==='admin'
-    ? sb.auth.signUp({email:emailOf(id),password:pw}).then(function(r){if(r.error)throw r.error;if(!r.data.session)throw new Error('Compte créé, mais Supabase demande une confirmation par e-mail. Désactive « Confirm email » dans Supabase puis réessaie.');return q(sb.rpc('devenir_admin'))}).then(function(ok){if(!ok){return sb.auth.signOut().then(function(){throw new Error('Un administrateur existe déjà. Connecte-toi avec ton identifiant.')})}})
-    : sb.auth.signInWithPassword({email:emailOf(id),password:pw}).then(function(r){if(r.error)throw new Error(/invalid/i.test(r.error.message)?'Identifiant ou mot de passe incorrect.':r.error.message)});
-  p.then(start,function(e){setMsg(e&&e.message||'Connexion impossible.')});
+    ? retry(function(){return sb.auth.signUp({email:emailOf(id),password:pw}).then(function(r){if(r.error)throw r.error;return r})},2)
+        /* compte déjà créé (par exemple quand la réponse s'est perdue) : on se connecte avec */
+        .catch(function(e){if(net(e)||/registered|exists/i.test(e&&e.message||''))return retry(function(){return signIn(id,pw)},2);throw e})
+        .then(function(r){if(!r.data.session)throw new Error('Compte créé, mais Supabase demande une confirmation par e-mail. Désactive « Confirm email » dans Supabase puis réessaie.');return retry(function(){return q(sb.rpc('devenir_admin'))},2)})
+        .then(function(ok){if(!ok){return sb.auth.signOut().then(function(){throw new Error('Un administrateur existe déjà. Connecte-toi avec ton identifiant.')})}})
+    : retry(function(){return signIn(id,pw)},1);
+  p.then(start,function(e){setMsg(nice(e,mode))});
 }
+function tmo(p,ms){return Promise.race([p,new Promise(function(_,no){setTimeout(function(){no(new Error('timeout'))},ms)})])}
+function showWait(){
+  if(!box){box=document.createElement('div');document.body.appendChild(box)}
+  box.innerHTML='<div class="cb-login"><div class="cb-card"><div class="cb-logo">f</div><h1>Compte Boost</h1><p class="cb-sub">Connexion à la base de données…</p></div></div>';
+}
+function profilDe(uid){return retry(function(){return tmo(q(sb.from('profils').select('role,code,nom').eq('user_id',uid).maybeSingle()),15000)},2)}
 function start(){
-  return sb.auth.getSession().then(function(r){
+  showWait();
+  return tmo(sb.auth.getSession(),15000).then(function(r){
     session=r.data.session; if(!session){showLogin('login');return}
-    return Promise.all([q(sb.from('profils').select('role,code,nom').eq('user_id',session.user.id).maybeSingle()),q(sb.rpc('heure_serveur')).catch(function(){return null})]).then(function(x){
-      profil=x[0];
+    var uid=session.user.id;
+    return Promise.all([profilDe(uid),tmo(q(sb.rpc('heure_serveur')),10000).catch(function(){return null})]).then(function(x){
       if(x[1]){window.CB_OFF=new Date(x[1]).getTime()-Date.now()}
+      if(x[0])return x[0];
+      /* compte créé mais la réponse s'est perdue avant « devenir administrateur » : on termine l'installation
+         (le serveur refuse si un administrateur existe déjà) */
+      return retry(function(){return tmo(q(sb.rpc('devenir_admin')),15000)},2).then(function(ok){return ok?profilDe(uid):null});
+    }).then(function(p){
+      profil=p;
       if(!profil){return sb.auth.signOut().then(function(){session=null;showLogin('login','Ce compte n\'a pas d\'accès. Demande à l\'administrateur.')})}
       if(box){box.remove();box=null}
       var out=document.createElement('button');out.type='button';out.className='cb-out';out.textContent='Se déconnecter';out.onclick=deconnexion;document.body.appendChild(out);
       resolveReady();
     });
-  }).catch(function(e){showLogin('login',e&&e.message||'Connexion impossible. Vérifie ta connexion Internet.')});
+  }).catch(function(e){showLogin('login',nice(e,'login'))});
 }
 var css=document.createElement('style');
 css.textContent='.cb-login{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--bg,#eef6fc)}'+
