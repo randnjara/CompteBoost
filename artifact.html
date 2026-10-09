@@ -1,6 +1,10 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%231877f2%22/%3E%3Ctext x=%2216%22 y=%2224%22 font-size=%2222%22 font-family=%22Arial%22 font-weight=%22700%22 fill=%22white%22 text-anchor=%22middle%22%3Ef%3C/text%3E%3C/svg%3E">
-<style>*{box-sizing:border-box}html,body{margin:0}body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}</style></head><body>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
 <title>Compte Boost</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
@@ -258,7 +262,6 @@ details summary{cursor:pointer;font-weight:600}
 </style>
 
 <div id="app" class="app"></div>
-<script src="config.js"></script><script src="supabase.js"></script><script src="web.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 (function(){
@@ -268,8 +271,6 @@ var JC=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 var MC=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 /* Date de départ du suivi : rien avant cette date dans les statistiques, graphiques et historiques */
-/* Heure de référence : celle du serveur quand elle est connue (décalage mesuré à la connexion) */
-function nowD(){return new Date(Date.now()+(window.CB_OFF||0))}
 var DEBUT='2026-10-05';
 /* Les employés saisissent dans le logiciel à partir de cette date ; avant, les jours viennent du fichier Excel */
 var SAISIE_DEBUT='2026-10-09';
@@ -292,7 +293,7 @@ function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return ymd(d)}
 /* Heure de Madagascar, quel que soit le fuseau de l'appareil */
 var FMT=null;try{FMT=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}catch(e){}
 function mg(d){
-  d=d||nowD();
+  d=d||new Date();
   if(FMT){var o={};FMT.formatToParts(d).forEach(function(p){o[p.type]=p.value});if(o.hour==='24')o.hour='00';return o}
   return {year:String(d.getFullYear()),month:pad(d.getMonth()+1),day:pad(d.getDate()),hour:pad(d.getHours()),minute:pad(d.getMinutes()),second:pad(d.getSeconds())};
 }
@@ -937,7 +938,7 @@ function viewSaisie(){
   var grid='<div class="tb" style="border:0"><table class="sgrid"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>';
   var bottom='<div class="grid g2e"><div class="kpi">'+tile('send','l')+'<div><div class="t">Total messages · période affichée</div><span class="v b" id="szPer">'+(M.perN?nf(M.per):'—')+'</span></div></div>'+
     '<div class="kpi">'+tile('layers','l')+'<div><div class="t">Boosts actifs</div><span class="v g">'+M.actifs+'</span></div></div></div>';
-  var note=S.owner?'<div class="note">'+ico('info')+'<span>La saisie est faite par les employés. En mode <b>Administrateur</b>, tu peux seulement rectifier un jour déjà enregistré : change le chiffre puis clique sur <b>Rectifier</b> et indique le motif. La valeur d\'origine est conservée. Le mode <b>Employé</b> montre la grille telle que l\'employé la voit (lecture seule).</span></div>':'<div class="note">'+ico('info')+'<span>Tes chiffres sont gardés automatiquement en brouillon pendant la saisie. Clique sur <b>Enregistrer</b> sous le jour pour le valider : l\'heure (Madagascar, UTC+3, '+(window.CB_WEB?'heure du serveur':'selon l\'horloge de ton appareil')+') est notée et le jour est verrouillé. '+(S.owner?'En mode Administrateur, tu peux rectifier un jour enregistré avec un motif ; la valeur d\'origine est conservée.':'Seul l\'administrateur peut rectifier un jour enregistré : utilise « Demander une rectification » dans l\'historique de la page.')+'</span></div>';
+  var note=S.owner?'<div class="note">'+ico('info')+'<span>La saisie est faite par les employés. En mode <b>Administrateur</b>, tu peux seulement rectifier un jour déjà enregistré : change le chiffre puis clique sur <b>Rectifier</b> et indique le motif. La valeur d\'origine est conservée. Le mode <b>Employé</b> montre la grille telle que l\'employé la voit (lecture seule).</span></div>':'<div class="note">'+ico('info')+'<span>Tes chiffres sont gardés automatiquement en brouillon pendant la saisie. Clique sur <b>Enregistrer</b> sous le jour pour le valider : l\'heure (Madagascar, UTC+3, selon l\'horloge de ton appareil) est notée et le jour est verrouillé. '+(S.owner?'En mode Administrateur, tu peux rectifier un jour enregistré avec un motif ; la valeur d\'origine est conservée.':'Seul l\'administrateur peut rectifier un jour enregistré : utilise « Demander une rectification » dans l\'historique de la page.')+'</span></div>';
   var msg='<div class="msg '+((S.msgs.sz||{}).c||'')+'" role="status">'+((S.msgs.sz||{}).t||'')+'</div>';
   return '<div class="box" style="max-width:1100px">'+head+who+tog+nav+bar+grid+msg+bottom+note+
     '<div class="row"><button type="button" data-page-sheet="'+pid+'">'+ico('hist','ic')+' Historique de la page</button></div></div>';
@@ -967,7 +968,7 @@ function editCell(pid,d,field,bid,val){
 function saveDraft(pid,d){
   if(S.owner)return;
   var key=pid+'_'+d, ed=S.ed[key]; if(!ed||!S.db||!S.me)return;
-  var mine=(S.brou[S.me]||{})[key], now=nowD().toISOString();
+  var mine=(S.brou[S.me]||{})[key], now=new Date().toISOString();
   var base=mine||{}, b=Object.assign({},base.boosts||{});
   Object.keys(ed.b).forEach(function(k){b[k]=ed.b[k]});
   var doc={pageId:pid,date:d,boosts:b,reels:'r' in ed?ed.r:(base.reels==null?'':base.reels),creeLe:base.creeLe||now,majLe:now,auteur:S.me};
@@ -997,7 +998,7 @@ function askCommit(pid,d){
 function cleanBoosts(L){return L.map(function(b){return {id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}})}
 function commitDay(pid,d){
   if(S.owner)return;
-  var k=checkDay(pid,d), col=k.col, key=pid+'_'+d, ref=S.db.doc('jours/'+key), now=nowD().toISOString(), br=brouOf(pid,d);
+  var k=checkDay(pid,d), col=k.col, key=pid+'_'+d, ref=S.db.doc('jours/'+key), now=new Date().toISOString(), br=brouOf(pid,d);
   S.modal=null; S.msgs.sz={t:'Enregistrement en cours…',c:''}; render();
   ref.get().then(function(s){
     if(s.exists)throw {code:'deja'};
@@ -1023,7 +1024,7 @@ function askRect(pid,d){
   render(); setTimeout(function(){var m=$('rectMotif');if(m)m.focus()},30);
 }
 function doRect(pid,d,motif){
-  var k=checkDay(pid,d), col=k.col, c=col.c, key=pid+'_'+d, now=nowD().toISOString(), J=c.J;
+  var k=checkDay(pid,d), col=k.col, c=col.c, key=pid+'_'+d, now=new Date().toISOString(), J=c.J;
   var avant={boosts:cleanBoosts(c.counters.map(function(b){return {id:b.id,nom:b.nom,statut:b.statut,messages:b.messages==null?null:+b.messages}})),reels:c.totaux.reels,totalBoost:c.totaux.messagesBoosts};
   var apres={boosts:cleanBoosts(col.boosts),reels:col.r,totalBoost:col.tot};
   var r={par:S.me,parNom:'Administrateur',le:now,motif:motif,avant:avant,apres:apres};
@@ -1044,7 +1045,7 @@ function defsFor(pid){
   return {liste:(st?st.boosts:[]).map(function(b){return {id:b.id,nom:b.nom,creeLe:null,hist:[]}})};
 }
 function writeDefs(pid,doc,msg){
-  doc.majLe=nowD().toISOString(); doc.pageId=pid;
+  doc.majLe=new Date().toISOString(); doc.pageId=pid;
   S.bdefs[pid]=doc; bump(); render();
   S.db.doc('boosts/'+pid).set(doc).then(function(){S.msgs.sz={t:msg,c:'ok'};render()},function(){S.msgs.sz={t:'Changement refusé.',c:'err'};render()});
 }
@@ -1052,14 +1053,14 @@ function setBoostStatus(pid,bid,statut){
   var doc=defsFor(pid), d=null;doc.liste.forEach(function(x){if(x.id===bid)d=x});
   if(!d){var b=(latestState(pid,dayMap(),today())||{boosts:[]}).boosts.filter(function(x){return x.id===bid})[0];d={id:bid,nom:b?b.nom:'Boost',creeLe:null,hist:[]};doc.liste.push(d)}
   d.hist=d.hist.filter(function(h){return h.date!==today()});
-  d.hist.push({statut:statut,date:today(),le:nowD().toISOString(),par:S.me,parNom:myName()});
+  d.hist.push({statut:statut,date:today(),le:new Date().toISOString(),par:S.me,parNom:myName()});
   writeDefs(pid,doc,'✓ '+d.nom+' : '+stInfo(statut).l.toLowerCase()+' à partir du '+fmtD(today())+'.');
 }
 function addBoost(pid){
   var doc=defsFor(pid), dm=dayMap(), st=latestState(pid,dm,today()), names={}, n=1;
   (st?st.boosts:[]).concat(doc.liste).forEach(function(b){names[b.nom]=1});
   while(names['Boost '+n])n++;
-  doc.liste.push({id:'b'+uid(),nom:'Boost '+n,creeLe:today(),hist:[{statut:'actif',date:today(),le:nowD().toISOString(),par:S.me,parNom:myName()}]});
+  doc.liste.push({id:'b'+uid(),nom:'Boost '+n,creeLe:today(),hist:[{statut:'actif',date:today(),le:new Date().toISOString(),par:S.me,parNom:myName()}]});
   writeDefs(pid,doc,'✓ Boost '+n+' ajouté. Son premier compteur servira de référence.');
 }
 
@@ -1244,7 +1245,7 @@ function askDemande(pid,d,type,anom){
 function sendDemande(){
   var M=S.modal, txt=($('demMsg')||{}).value||'';
   if(!txt.trim()){$('demErr').textContent='Écris ta demande.';return}
-  var doc={type:M.kind,anomalie:M.anom,pageId:M.pid,date:M.d,message:txt.trim(),creeLe:nowD().toISOString(),statut:'ouverte',auteurNom:myName()};
+  var doc={type:M.kind,anomalie:M.anom,pageId:M.pid,date:M.d,message:txt.trim(),creeLe:new Date().toISOString(),statut:'ouverte',auteurNom:myName()};
   S.modal=null;(S.dem[S.me]=S.dem[S.me]||[]).push(doc);S.msgs.dem='✓ Demande envoyée à l\'administrateur.';render();
   S.db.collection('saisies/'+S.me+'/demandes').add(doc).catch(function(){S.msgs.dem='Envoi refusé.';render()});
 }
@@ -1262,8 +1263,8 @@ function viewAnom(){
 }
 function treatDemande(u,id){
   var rep=window.prompt?null:null;
-  (S.dem[u]||[]).forEach(function(x){if(x.id===id){x.statut='traitee';x.traiteeLe=nowD().toISOString()}});render();
-  S.db.doc('saisies/'+u+'/demandes/'+id).update({statut:'traitee',traiteeLe:nowD().toISOString(),traiteePar:S.me}).catch(function(){});
+  (S.dem[u]||[]).forEach(function(x){if(x.id===id){x.statut='traitee';x.traiteeLe=new Date().toISOString()}});render();
+  S.db.doc('saisies/'+u+'/demandes/'+id).update({statut:'traitee',traiteeLe:new Date().toISOString(),traiteePar:S.me}).catch(function(){});
 }
 function periodBar(w){
   var t=today(), m=monday(t), days='', isD=w==='d', type=isD?S.dp:S.rp, day=isD?(S.dDay||t):null;
@@ -1442,7 +1443,7 @@ function invLink(code){return appUrl()+'#code='+code}
 function invMessage(u){var m=S.membres[u];return 'Bonjour '+m.nom+', voici ton accès Compte Boost : '+invLink(m.code)+' — Ton code : '+m.code}
 function addInvite(nom){
   nom=String(nom||'').trim(); if(!nom)return;
-  var code=codeFor(nom), id='inv_'+code, d={nom:nom,code:code,creeLe:nowD().toISOString()};
+  var code=codeFor(nom), id='inv_'+code, d={nom:nom,code:code,creeLe:new Date().toISOString()};
   S.membres[id]=d; S.msgs.mem='✓ '+nom+' ajouté. Code : '+code+'. Attribue-lui ses pages, puis copie son lien.'; render();
   if(online())wSet('membres',id,d).catch(function(){delete S.membres[id];S.msgs.mem='Ajout refusé.';render()});
 }
@@ -1451,7 +1452,7 @@ function linkCode(code){
   code=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   if(!code){S.msgs.code='Écris ton code.';render();return}
   S.myInv=code; S.msgs.code=''; S.drafts={};
-  var doc=Object.assign({},S.myDoc||{},{invitation:code,codeLe:nowD().toISOString()}); S.myDoc=doc;
+  var doc=Object.assign({},S.myDoc||{},{invitation:code,codeLe:new Date().toISOString()}); S.myDoc=doc;
   if(online()&&S.me)S.db.doc('membres/'+S.me).set(doc).catch(function(){S.msgs.code='Enregistrement du code impossible. Vérifie que l\'administrateur a partagé la page avec toi.';render()});
   if(!myPages(true).length)S.msgs.code='Aucune page pour le code '+code+' pour l\'instant.';
   render();
@@ -1522,7 +1523,7 @@ function readImport(file){
   r.readAsArrayBuffer(file);
 }
 function runImport(){
-  var docs=impCompute().fresh.map(function(n){return{id:'p'+uid(),data:{nom:n,responsable:null,archivee:false,creeLe:nowD().toISOString(),source:'import'}}});
+  var docs=impCompute().fresh.map(function(n){return{id:'p'+uid(),data:{nom:n,responsable:null,archivee:false,creeLe:new Date().toISOString(),source:'import'}}});
   var ok=0, btn=$('impGo'); if(btn)btn.disabled=true;
   var fin=function(){S.imp=null;S.msgs.imp='✓ '+ok+' page'+(ok>1?'s':'')+' importée'+(ok>1?'s':'')+'. Attribue maintenant un responsable à chacune.';render()};
   if(!online()){docs.forEach(function(d){S.pages[d.id]=d.data});ok=docs.length;fin();return}
@@ -1542,64 +1543,6 @@ function pageSelect(id,val,withAll){
 }
 function card(l,v,s){return '<div class="card"><span class="label">'+l+'</span><span class="v">'+v+'</span><span class="s">'+(s||'')+'</span></div>'}
 function pctBadge(p){if(p==null||!isFinite(p))return '—';var c=p>0.05?'up':p<-0.05?'down':'flat';return '<span class="d '+c+' plain">'+(c==='up'?'↑ +':c==='down'?'↓ −':'→ ')+Math.abs(p).toFixed(2).replace('.',',')+' %</span>'}
-/* ---------- Version en ligne : un identifiant (le code) et un mot de passe par employé ---------- */
-function siteUrl(){return location.origin+location.pathname}
-function accesTexte(m,pw){return 'Bonjour '+m.nom+', voici ton accès Compte Boost.\nLien : '+siteUrl()+'\nIdentifiant : '+m.code+'\nMot de passe : '+pw}
-function teamHtml(ids){
-  var pagesOf=function(u){var n=ids.filter(function(p){return S.pages[p].responsable===u}).map(function(p){return esc(S.pages[p].nom)});return n.length?n.join(', '):'<span class="muted">Aucune</span>'};
-  var rows=invites().map(function(u){
-    var m=S.membres[u];
-    return '<tr><td><strong>'+esc(m.nom)+'</strong></td><td style="white-space:normal">'+pagesOf(u)+'</td><td class="num"><strong>'+esc(m.code)+'</strong></td>'+
-      '<td>'+(m.compte?'<span class="chip ok">✓ Accès créé</span> <button class="small" type="button" data-webpw="'+esc(u)+'">Nouveau mot de passe</button>':'<button class="small primary" type="button" data-webacces="'+esc(u)+'">Créer l\'accès</button>')+'</td></tr>';
-  }).join('')||'<tr><td colspan="4" class="empty">Ajoute ton premier employé ci-dessus.</td></tr>';
-  return '<section class="panel"><h2>Employés et accès</h2>'+
-    '<form class="row" id="addInvite"><input id="newInvite" placeholder="Nom de l\'employé (ex. Jean)" required style="flex:1 1 200px"><button class="primary" type="submit">Ajouter un employé</button></form>'+
-    '<div class="tablebox"><table><thead><tr><th>Employé</th><th>Pages attribuées</th><th>Identifiant</th><th>Accès</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<div class="msg" id="memMsg" role="status">'+(S.msgs.mem||'')+'</div>'+
-    '<ol class="steps"><li>Ajoute l\'employé ici et attribue-lui ses pages dans le tableau des pages.</li><li>Clique <strong>Créer l\'accès</strong> et choisis son mot de passe.</li><li>Copie le message et envoie-le-lui (WhatsApp, Messenger…). Il contient le lien du site, son identifiant et son mot de passe.</li><li>Il se connecte avec ces informations et ne voit que ses pages.</li></ol>'+
-    '<details'+(pageIds().length?'':' open')+' style="margin-top:8px"><summary><b>Restaurer une sauvegarde</b> (fichier sauvegarde-compte-boost.json)</summary><p class="muted" style="font-size:.8rem">Ajoute les pages, l\'historique Excel et les employés de la sauvegarde. Les données déjà présentes ne sont jamais remplacées.</p><input type="file" id="webRestore" accept=".json,application/json"><div class="msg" id="webRestMsg" role="status">'+esc(S.msgs.rest||'')+'</div></details>'+
-    '<p class="muted" style="font-size:.8rem">Lien du site : <b>'+esc(siteUrl())+'</b></p></section>';
-}
-function webPwModal(u,nouveau){
-  var m=S.membres[u];
-  S.modal={type:'webacces',u:u,nouveau:nouveau,html:'<h2>'+ico('users','ic o')+(nouveau?'Nouveau mot de passe':'Créer l\'accès')+' · '+esc(m.nom)+'</h2>'+
-    '<p class="muted" style="margin:0">Identifiant : <b>'+esc(m.code)+'</b></p>'+
-    '<label class="fl"><span>Mot de passe (au moins 6 caractères)</span><input id="webPw" type="text" autocomplete="off" value="'+esc(motDePasse())+'"></label><div class="msg err" id="webMsg"></div>'+
-    '<div class="row" style="justify-content:flex-end"><button type="button" data-close="1">Annuler</button><button type="button" class="primary" data-webok="1">'+(nouveau?'Changer':'Créer l\'accès')+'</button></div>'};
-  render();
-}
-function motDePasse(){var a='abcdefghjkmnpqrstuvwxyz23456789',s='';for(var i=0;i<8;i++)s+=a[Math.floor(Math.random()*a.length)];return s}
-function webOk(){
-  var mo=S.modal, m=S.membres[mo.u], pw=($('webPw')||{}).value||'';
-  if(pw.length<6){$('webMsg').textContent='Le mot de passe doit avoir au moins 6 caractères.';return}
-  $('webMsg').textContent='Un instant…';
-  var p=mo.nouveau?window.CB_WEB.changerMdp(m.code,pw):window.CB_WEB.creerCompte(m.code,pw);
-  p.then(function(){
-    if(!mo.nouveau)m.compte=true;
-    var t=accesTexte(m,pw);
-    S.modal={type:'webfait',html:'<h2>'+ico('check','ic o')+'Accès prêt pour '+esc(m.nom)+'</h2><p class="muted" style="margin:0">Envoie-lui ce message :</p><pre style="white-space:pre-wrap;background:var(--soft);padding:12px;border-radius:10px;margin:0">'+esc(t)+'</pre>'+
-      '<div class="row" style="justify-content:flex-end"><button type="button" data-copy="'+esc(t)+'">Copier le message</button><button type="button" class="primary" data-close="1">Terminé</button></div>'};
-    render();
-  },function(e){var x=$('webMsg');if(x)x.textContent=(e&&e.message)||'Impossible de créer l\'accès.'});
-}
-document.addEventListener('click',function(ev){
-  var b=ev.target.closest&&ev.target.closest('[data-webacces],[data-webpw],[data-webok]');if(!b)return;
-  if(b.dataset.webacces)webPwModal(b.dataset.webacces,false);
-  else if(b.dataset.webpw)webPwModal(b.dataset.webpw,true);
-  else webOk();
-});
-document.addEventListener('change',function(ev){
-  if(ev.target.id!=='webRestore'||!ev.target.files[0])return;
-  var f=ev.target.files[0], rd=new FileReader();
-  function say(t){S.msgs.rest=t;var m=$('webRestMsg');if(m)m.textContent=t}
-  rd.onload=function(){
-    var j;try{j=JSON.parse(rd.result)}catch(e){say('Ce fichier n\'est pas une sauvegarde Compte Boost.');return}
-    if(!j||j.format!=='compte-boost-sauvegarde'||!Array.isArray(j.docs)){say('Ce fichier n\'est pas une sauvegarde Compte Boost.');return}
-    say('Restauration… 0 / '+j.docs.length);
-    window.CB_WEB.importer(j.docs,function(n,t){say('Restauration… '+n+' / '+t)}).then(function(n){say('✓ Sauvegarde restaurée ('+n+' éléments).')},function(e){say('Restauration interrompue : '+(e&&e.message||'erreur')+'. Tu peux relancer, rien ne sera dupliqué.')});
-  };
-  rd.readAsText(f);
-});
 
 /* ---------- Paramètres ---------- */
 function viewParams(){
@@ -1615,8 +1558,7 @@ function saveCfg(patch){
 function syncNoms(){
   if(!S.owner||!S.cfgLoaded||!S.membresLoaded)return;
   var n={};invites().forEach(function(u){n[u]=S.membres[u].nom});
-  var o=S.cfg.noms||{}, diff=Object.keys(n).length!==Object.keys(o).length||Object.keys(n).some(function(k){return n[k]!==o[k]});
-  if(diff)saveCfg({noms:n});
+  if(JSON.stringify(n)!==JSON.stringify(S.cfg.noms||{}))saveCfg({noms:n});
 }
 /* Affectation d'une page : on garde l'historique (début, fin, auteur) */
 function assignPage(pid,resp){
@@ -1624,7 +1566,7 @@ function assignPage(pid,resp){
   var t=today(), y=addDays(t,-1), aff=(p.affectations||[]).map(function(a){return Object.assign({},a)});
   if(!aff.length&&old)aff.push({resp:old,debut:DEBUT,fin:null,par:null,deduite:true});
   aff.forEach(function(a){if(!a.fin)a.fin=y>=a.debut?y:t});
-  if(resp)aff.push({resp:resp,debut:t,fin:null,par:S.me,le:nowD().toISOString()});
+  if(resp)aff.push({resp:resp,debut:t,fin:null,par:S.me,le:new Date().toISOString()});
   setPage(pid,{responsable:resp,affectations:aff});
 }
 function setPage(id,patch){
@@ -1634,7 +1576,7 @@ function setPage(id,patch){
 }
 function setMember(u,patch){Object.assign(S.membres[u],patch);wUpdate('membres',u,patch).catch(function(){});render()}
 function validate(key,on){
-  var now=nowD();
+  var now=new Date();
   var v=on?{statut:'valide',par:S.me,le:now.toISOString(),leTexte:'le '+stampS(now.toISOString())}:{statut:'averifier',par:S.me,le:now.toISOString()};
   var parts=key.split('_'), wk=parts[0], pid=parts.slice(1).join('_');
   if(on){var a=aggregate(dayMap(),wk,'semaine',pid);if(a)v.controle={boosts:a.boosts,reels:a.reels,ecart:a.ecart,nbBoosts:a.nbBoosts}}
@@ -1785,7 +1727,7 @@ document.addEventListener('submit',function(ev){
   if(ev.target.id==='addInvite'){ev.preventDefault();addInvite($('newInvite').value);return}
   if(ev.target.id!=='addPage')return; ev.preventDefault();
   var n=$('newPage').value.trim(); if(!n)return;
-  var id='p'+uid(), p={nom:n,responsable:null,archivee:false,creeLe:nowD().toISOString()};
+  var id='p'+uid(), p={nom:n,responsable:null,archivee:false,creeLe:new Date().toISOString()};
   S.pages[id]=p; bump(); render();
   wSet('pages',id,p).then(function(){S.msgs.eq='Page « '+n+' » ajoutée.';soft()},function(){delete S.pages[id];S.msgs.eq='Ajout refusé.';render()});
 });
@@ -1838,7 +1780,7 @@ function boot(){
         var ref=S.db.doc('membres/'+S.me);
         ref.get().then(function(s){
           var doc=s.exists&&s.data?Object.assign({},s.data()):null;
-          if(!doc){doc={inscritLe:nowD().toISOString(),nomSaisi:x[2]||''};ref.set(doc).catch(function(){})}
+          if(!doc){doc={inscritLe:new Date().toISOString(),nomSaisi:x[2]||''};ref.set(doc).catch(function(){})}
           S.myDoc=doc; if(doc.invitation)S.myInv=doc.invitation;
           if(S.hashCode&&S.hashCode!==S.myInv)linkCode(S.hashCode); else render();
         }).catch(function(){});
@@ -1849,4 +1791,5 @@ function boot(){
 }
 boot();
 })();
-</script></body></html>
+</script>
+</body></html>
