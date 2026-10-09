@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>Compte Boost</title>
+<script>
+/* Lien mal tapé (ex. /CompteBoost/ANJA6585) : on renvoie vers la page de connexion avec l'identifiant rempli */
+(function(){var p=location.pathname,b='/CompteBoost/',i=p.indexOf(b),r=i<0?'':p.slice(i+b.length);
+var c=r.replace(/[^A-Za-z0-9]/g,'');location.replace(b+(c?'?id='+encodeURIComponent(c.toUpperCase()):''))})();
+</script>
+<p><a href="/CompteBoost/">Ouvrir Compte Boost</a></p>
