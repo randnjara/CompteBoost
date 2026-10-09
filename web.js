@@ -143,7 +143,7 @@ function submit(mode){
         .then(function(r){if(!r.data.session)throw new Error('Compte créé, mais Supabase demande une confirmation par e-mail. Désactive « Confirm email » dans Supabase puis réessaie.');return retry(function(){return q(sb.rpc('devenir_admin'))},2)})
         .then(function(ok){if(!ok){return sb.auth.signOut().then(function(){throw new Error('Un administrateur existe déjà. Connecte-toi avec ton identifiant.')})}})
     : retry(function(){return signIn(id,pw)},1);
-  p.then(start,function(e){setMsg(nice(e,mode))});
+  p.then(function(){sansId();return start()},function(e){setMsg(nice(e,mode))});
 }
 function tmo(p,ms){return Promise.race([p,new Promise(function(_,no){setTimeout(function(){no(new Error('timeout'))},ms)})])}
 function showWait(){
@@ -165,11 +165,29 @@ function start(){
     }).then(function(p){
       profil=p;
       if(!profil){return sb.auth.signOut().then(function(){session=null;showLogin('login','Ce compte n\'a pas d\'accès. Demande à l\'administrateur.')})}
-      if(box){box.remove();box=null}
-      var out=document.createElement('button');out.type='button';out.className='cb-out';out.textContent='Se déconnecter';out.onclick=deconnexion;document.body.appendChild(out);
-      resolveReady();
+      var pre=lienId();
+      if(pre&&String(profil.code||'').toUpperCase()!==pre)return autreCompte(pre);
+      ouvrir();
     });
   }).catch(function(e){showLogin('login',nice(e,'login'))});
+}
+/* Lien d'un employé (?id=CODE) ouvert alors qu'un autre compte est connecté sur ce navigateur */
+function lienId(){var v=null;try{v=new URLSearchParams(location.search).get('id')}catch(e){}return v?String(v).toUpperCase().replace(/[^A-Z0-9]/g,''):null}
+function sansId(){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}}
+function autreCompte(code){
+  if(!box){box=document.createElement('div');document.body.appendChild(box)}
+  var qui=profil.role==='admin'?'administrateur':(profil.nom||profil.code||'un autre compte');
+  box.innerHTML='<div class="cb-login"><div class="cb-card"><div class="cb-logo">f</div><h1>Compte Boost</h1>'+
+    '<p class="cb-sub">Ce lien est celui de l\u2019employé <b>'+esc(code)+'</b>, mais ce navigateur est connecté en <b>'+esc(qui)+'</b>.</p>'+
+    '<button type="button" class="cb-btn" id="cbAutre">Ouvrir l\u2019espace de '+esc(code)+'</button>'+
+    '<a href="#" id="cbRester" class="cb-link">Rester connecté en '+esc(qui)+'</a></div></div>';
+  document.getElementById('cbAutre').onclick=function(){sb.auth.signOut().then(function(){session=null;profil=null;showLogin('login')},function(){showLogin('login')})};
+  document.getElementById('cbRester').onclick=function(ev){ev.preventDefault();sansId();ouvrir()};
+}
+function ouvrir(){
+  if(box){box.remove();box=null}
+  var out=document.createElement('button');out.type='button';out.className='cb-out';out.textContent='Se déconnecter';out.onclick=deconnexion;document.body.appendChild(out);
+  resolveReady();
 }
 var css=document.createElement('style');
 css.textContent='.cb-login{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--bg,#eef6fc)}'+
