@@ -259,7 +259,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 </style>
 
 <div id="app" class="app"></div>
-<script src="config.js?v=15"></script><script src="supabase.js"></script><script src="web.js?v=15"></script>
+<script src="config.js?v=16"></script><script src="supabase.js"></script><script src="web.js?v=16"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 (function(){
@@ -273,7 +273,9 @@ var MC=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct
 function nowD(){return new Date(Date.now()+(window.CB_OFF||0))}
 var DEBUT='2026-10-05';
 /* Les employés saisissent dans le logiciel à partir de cette date ; avant, les jours viennent du fichier Excel */
-var SAISIE_DEBUT='2026-10-09';
+var SAISIE_DEBUT='2026-10-08';
+/* Un employé peut rattraper un jour non enregistré pendant 2 jours (hier et avant-hier) */
+var RATTRAPAGE=2;
 /* Statuts des comptes Boost. actif:true = compté comme actif ; hors:true = ne compte plus parmi les boosts. */
 var STATUTS={actif:{l:'Actif',actif:true,c:'ok'},pause:{l:'En pause',c:'todo'},supprime:{l:'Supprimé',hors:true,c:'none'},termine:{l:'Terminé',hors:true,c:'none'}};
 /* Fuseau horaire de référence : Madagascar (UTC+3) */
@@ -839,7 +841,7 @@ function gridModel(pid){
   cols.forEach(function(d){
     var c=pm[d], key=pid+'_'+d, ed=S.ed[key], br=brouOf(pid,d), rec=!!(c&&(c.J||c.boostsDuJour||c.totaux.reels!=null));
     /* Saisie = employé seulement ; l'administrateur ne peut que rectifier un jour déjà enregistré */
-    var lock=!!S.apercu||d>t||d<DEBUT||(S.owner?(!admin||!rec):(rec||d<SAISIE_DEBUT));
+    var lock=!!S.apercu||d>t||d<DEBUT||(S.owner?(!admin||!rec):(rec||d<SAISIE_DEBUT||d<addDays(t,-RATTRAPAGE)));
     var cm={};if(c)c.counters.forEach(function(b){cm[b.id]=b.messages});
     var col={date:d,key:key,rec:rec,lock:lock,c:c,br:br,cells:{},tot:null,r:null,boosts:[],an:[]};
     var any=false,tot=0;
@@ -891,7 +893,8 @@ function stateHtml(col){
   if(col.br&&!col.rec)return '<span class="when">Brouillon sauvegardé<br>'+hmOf(col.br.majLe)+'</span>';
   if(col.date>today())return '<span class="when">Heure : —</span>';
   if(!col.rec&&col.date<SAISIE_DEBUT)return '<span class="when">Pas de relevé Excel</span>';
-  if(!col.rec&&col.date<today())return '<span class="when koc">Non effectué</span>';
+  if(!col.rec&&col.date<addDays(today(),-RATTRAPAGE))return '<span class="when koc">Non effectué<br>délai de 2 jours dépassé</span>';
+  if(!col.rec&&col.date<today())return '<span class="when koc">Non effectué'+(S.owner?'':'<br>à rattraper')+'</span>';
   if(S.owner&&!col.rec)return '<span class="when">En attente de l\'employé</span>';
   return '<span class="when">Heure : —</span>';
 }
