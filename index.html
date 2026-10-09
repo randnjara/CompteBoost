@@ -1646,17 +1646,26 @@ document.addEventListener('click',function(ev){
   else webOk();
 });
 document.addEventListener('change',function(ev){
-  if(ev.target.id!=='webRestore'||!ev.target.files[0])return;
-  var f=ev.target.files[0], rd=new FileReader();
-  function say(t){S.msgs.rest=t;var m=$('webRestMsg');if(m)m.textContent=t}
+  if((ev.target.id!=='webRestore'&&ev.target.id!=='webRestore2')||!ev.target.files[0])return;
+  var f=ev.target.files[0], rd=new FileReader(); if(ev.target.id==='webRestore2')S.banRest=true;
+  function say(t){S.msgs.rest=t;['webRestMsg','webRestMsg2'].forEach(function(i){var m=$(i);if(m)m.textContent=t})}
   rd.onload=function(){
     var j;try{j=JSON.parse(rd.result)}catch(e){say('Ce fichier n\'est pas une sauvegarde Compte Boost.');return}
     if(!j||j.format!=='compte-boost-sauvegarde'||!Array.isArray(j.docs)){say('Ce fichier n\'est pas une sauvegarde Compte Boost.');return}
     say('Restauration… 0 / '+j.docs.length);
-    window.CB_WEB.importer(j.docs,function(n,t){say('Restauration… '+n+' / '+t)}).then(function(n){say('✓ Sauvegarde restaurée ('+n+' éléments).')},function(e){say('Restauration interrompue : '+(e&&e.message||'erreur')+'. Tu peux relancer, rien ne sera dupliqué.')});
+    window.CB_WEB.importer(j.docs,function(n,t){say('Restauration… '+n+' / '+t)}).then(function(n){say('✓ Sauvegarde restaurée ('+n+' éléments).');render()},function(e){say('Restauration interrompue : '+(e&&e.message||'erreur')+'. Tu peux relancer, rien ne sera dupliqué.')});
   };
   rd.readAsText(f);
 });
+/* Base encore vide : gros bouton pour remettre les données de l'ancien Compte Boost (claude.ai) */
+function importBanner(){
+  if(!S.owner||S.apercu||!S.pagesOk||(pageIds().length&&!S.banRest))return '';
+  return '<section class="panel" style="border:2px solid #0284c7"><h2>'+ico('save','ic o')+'Remettre les données de l\'ancien Compte Boost</h2>'+
+    '<p style="margin:0 0 10px">Ta base en ligne est encore vide. Choisis le fichier <b>sauvegarde-compte-boost.json</b> (envoyé par Claude) : toutes tes pages, ton historique et tes employés reviennent.</p>'+
+    '<label class="primary" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#0284c7;color:#fff;font-weight:700;cursor:pointer">Choisir le fichier de sauvegarde<input type="file" id="webRestore2" accept=".json,application/json" style="display:none"></label>'+
+    '<div class="msg" id="webRestMsg2" role="status" style="margin-top:8px">'+esc(S.msgs.rest||'')+'</div>'+(S.banRest&&/✓/.test(S.msgs.rest||'')?'<button type="button" class="primary" data-banok="1">C\'est fini, fermer</button>':'')+'</section>';
+}
+document.addEventListener('click',function(ev){if(ev.target.closest&&ev.target.closest('[data-banok]')){S.banRest=false;S.msgs.rest='';render()}});
 
 /* ---------- Paramètres ---------- */
 function viewParams(){
@@ -1746,7 +1755,7 @@ function render(){
   var a=document.activeElement, fid=a&&a.id, ss=null;try{if(fid&&a.selectionStart!=null)ss=[a.selectionStart,a.selectionEnd]}catch(e){}
   var body='';try{body=viewBody()}catch(e){body='<div class="box"><p class="empty">Erreur d\'affichage : '+esc(e.message)+'</p></div>';if(window.console)console.error(e)}
   root.className='app'+(S.owner?'':' emp');
-  root.innerHTML=(S.owner?side():'')+'<main class="main">'+apercuBar()+topbar()+body+'</main>'+(S.modal?'<div class="ovl" data-ovl="1"><div class="modal'+(S.modal.type==='detail'?'':' sm')+'" role="dialog" aria-modal="true">'+S.modal.html+'</div></div>':'');
+  root.innerHTML=(S.owner?side():'')+'<main class="main">'+apercuBar()+topbar()+(typeof importBanner==='function'?importBanner():'')+body+'</main>'+(S.modal?'<div class="ovl" data-ovl="1"><div class="modal'+(S.modal.type==='detail'?'':' sm')+'" role="dialog" aria-modal="true">'+S.modal.html+'</div></div>':'');
   if(fid){var el=$(fid);if(el&&el!==document.activeElement&&!S.modal){el.focus();try{if(ss)el.setSelectionRange(ss[0],ss[1])}catch(e){}}}
 }
 var pending=false;
@@ -1862,7 +1871,7 @@ function subUser(u){
 }
 function watch(){
   var db=S.db;
-  db.collection('pages').onSnapshot(function(s){var p={};s.docs.forEach(function(d){p[d.id]=Object.assign({},d.data())});S.pages=p;bump();soft()},function(){});
+  db.collection('pages').onSnapshot(function(s){var p={};s.docs.forEach(function(d){p[d.id]=Object.assign({},d.data())});S.pages=p;S.pagesOk=true;bump();soft()},function(){});
   db.collection('jours').onSnapshot(function(s){var j={};s.docs.forEach(function(d){j[d.id]=Object.assign({},d.data())});S.jours=j;bump();soft()},function(){});
   db.collection('boosts').onSnapshot(function(s){var j={};s.docs.forEach(function(d){j[d.id]=Object.assign({},d.data())});S.bdefs=j;bump();soft()},function(){});
   db.collection('config').onSnapshot(function(s){var c=null;s.docs.forEach(function(d){if(d.id==='params')c=Object.assign({},d.data())});S.cfg=c||{};S.cfgLoaded=true;bump();syncNoms();soft()},function(){S.cfgLoaded=true});
