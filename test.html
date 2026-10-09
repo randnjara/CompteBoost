@@ -1,0 +1,13 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Test Compte Boost</title></head>
+<body style="font:18px sans-serif;padding:20px;background:#fff;color:#0b4f86">
+<h1 style="font-size:22px">Test Compte Boost</h1>
+<p>1. Page : <b style="color:green">OK</b></p>
+<p id="js">2. JavaScript : <b style="color:red">bloqué</b></p>
+<p id="db">3. Base de données : …</p>
+<p id="nav" style="font-size:13px;color:#555"></p>
+<script>
+document.getElementById('js').innerHTML='2. JavaScript : <b style="color:green">OK</b>';
+document.getElementById('nav').textContent=navigator.userAgent;
+var d=document.getElementById('db'),t=setTimeout(function(){d.innerHTML='3. Base de données : <b style="color:red">ne répond pas</b>'},15000);
+fetch('https://jjweuwmffaytwxkazzqb.supabase.co/auth/v1/health',{headers:{apikey:'sb_publishable_-RHbWIL5y6rpbapXrTf9Ag_hojOy4JY'}}).then(function(r){clearTimeout(t);d.innerHTML='3. Base de données : <b style="color:green">OK ('+r.status+')</b>'},function(e){clearTimeout(t);d.innerHTML='3. Base de données : <b style="color:red">erreur ('+e.message+')</b>'});
+</script></body></html>
