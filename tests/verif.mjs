@@ -16,6 +16,7 @@ for (const [name, vp] of [['ordinateur', { width: 1280, height: 800 }], ['télé
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(SITE + '?id=anja6585'); await p.waitForSelector('#cbLogin', { timeout: 20000 });
   console.log(name, '| écran de connexion OK | identifiant pré-rempli:', await p.inputValue('#cbId'));
+  if (/^https:/.test(SITE)) { const q = await b.newPage({ viewport: vp }); await q.goto(SITE + 'ANJA6585'); await q.waitForSelector('#cbLogin', { timeout: 20000 }); console.log(name, '| lien sans ?id= →', q.url(), '| identifiant:', await q.inputValue('#cbId')); await q.close(); }
   await p.fill('#cbPw', 'mauvais-mot-de-passe'); await p.click('.cb-btn'); await p.waitForTimeout(4000);
   console.log(name, '| mauvais mot de passe →', await p.textContent('.cb-msg'));
   const w = await p.evaluate(() => document.documentElement.scrollWidth);
