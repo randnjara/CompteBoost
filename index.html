@@ -3,7 +3,7 @@
 <style>*{box-sizing:border-box}html,body{margin:0}body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}</style></head><body>
 <title>Compte Boost</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" media="print" onload="this.media='all'">
 <style>
 /* Mise en page : barre latérale d'icônes (admin) ou barre du haut (employé), cartes blanches sur fond bleu ciel, tableaux fins */
 :root{
@@ -258,8 +258,9 @@ details summary{cursor:pointer;font-weight:600}
 tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 </style>
 
-<div id="app" class="app"></div>
-<script src="config.js?v=17"></script><script src="supabase.js?v=17"></script><script src="web.js?v=17"></script>
+<div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
+<script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
+<script src="config.js?v=18"></script><script src="supabase.js?v=18"></script><script src="web.js?v=18"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
