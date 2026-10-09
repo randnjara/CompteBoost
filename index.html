@@ -255,6 +255,7 @@ details summary{cursor:pointer;font-weight:600}
   .kpi .v{font-size:1.6rem}
   .topbar .brand span{display:none}
 }
+tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 </style>
 
 <div id="app" class="app"></div>
@@ -274,7 +275,7 @@ var DEBUT='2026-10-05';
 /* Les employés saisissent dans le logiciel à partir de cette date ; avant, les jours viennent du fichier Excel */
 var SAISIE_DEBUT='2026-10-09';
 /* Statuts des comptes Boost. actif:true = compté comme actif ; hors:true = ne compte plus parmi les boosts. */
-var STATUTS={actif:{l:'Actif',actif:true,c:'ok'},pause:{l:'En pause',c:'todo'},supprime:{l:'Supprimé',hors:true,c:'none'}};
+var STATUTS={actif:{l:'Actif',actif:true,c:'ok'},pause:{l:'En pause',c:'todo'},supprime:{l:'Supprimé',hors:true,c:'none'},termine:{l:'Terminé',hors:true,c:'none'}};
 /* Fuseau horaire de référence : Madagascar (UTC+3) */
 var TZ='Indian/Antananarivo';
 var S={db:null,user:null,me:null,owner:false,mode:'claude',pages:{},membres:{},entries:{},valid:{},names:{},jours:{},bdefs:{},brou:{},dem:{},cfg:{},ver:0,
@@ -691,7 +692,7 @@ function kpi(icon,cls,title,sub,val,vcls,right,foot){
 function filterBar(){
   var f=S.f, R=typeRange(f.type,f.ref,f.a,f.b);
   var per=f.type==='periode'?'<span class="row" style="gap:4px"><input type="date" id="fA" value="'+R.a+'" min="'+DEBUT+'" aria-label="Du"><span class="muted">au</span><input type="date" id="fB" value="'+R.b+'" min="'+DEBUT+'" aria-label="Au"></span>':rangeNav('f',R,R.a>DEBUT,true);
-  return '<div class="fbar">'+seg('ftype',f.type,[['semaine','Semaine'],['mois','Mois'],['annee','Année'],['periode','Période']])+per+
+  return '<div class="fbar">'+seg('ftype',f.type,[['jour','Jour'],['semaine','Semaine'],['mois','Mois'],['annee','Année'],['periode','Période']])+per+
     '<label class="fl"><span>Page Facebook</span>'+sel('fPage',[['all',f.emp?'Toutes les pages de '+memberName(f.emp):'Toutes les pages']].concat(empPageIds().map(function(p){return [p,S.pages[p].nom]})),f.page)+'</label>'+
     '<label class="fl"><span>Employé</span>'+sel('fEmp',[['','Tous les employés']].concat(empList().map(function(k){return [k,memberName(k)]})),f.emp)+'</label></div>';
 }
@@ -758,22 +759,24 @@ function empRow(dm,k,a,b){
     var aff=affectations(p).filter(function(z){return z.resp&&empKey(z.resp)===k&&!z.fin}).pop(), start=aff?aff.debut:DEBUT;
     [addDays(t,-1),addDays(t,-2)].forEach(function(d){if(d>=start&&d>=SAISIE_DEBUT&&dayStatus(p,d,dm)==='non')miss++});
   });
-  var st=!pids.length?'none':miss>=2?'retard':(miss||an)?'verif':'actif';
-  return {k:k,pids:pids,x:x,c:c,last:last,miss:miss,an:an,st:st};
+  var ob=objCible(k,a,b), sous=!!(ob&&pids.length&&(x.nB?x.b:0)<ob.cible);
+  var st=!pids.length?'none':miss>=2?'retard':sous?'objectif':(miss||an)?'verif':'actif';
+  return {k:k,pids:pids,x:x,c:c,last:last,miss:miss,an:an,st:st,ob:ob,sous:sous};
 }
-var EST={actif:['Actif','ok'],verif:['À vérifier','wa'],retard:['En retard','ko'],none:['Sans page','no']};
+var EST={actif:['Actif','ok'],objectif:['Objectif non atteint','ko'],verif:['À vérifier','wa'],retard:['En retard','ko'],none:['Sans page','no']};
 function suiviEmployes(dm,R){
   var t=today(), b=R.b>t?t:R.b, q=(S.eQ||'').toLowerCase();
   var rows=empList().filter(function(k){return !S.f.emp||k===S.f.emp}).map(function(k){return empRow(dm,k,R.a,b)}).filter(function(o){return (!S.eStat||o.st===S.eStat)&&(!q||memberName(o.k).toLowerCase().indexOf(q)>=0)});
   var html=rows.map(function(o,i){
-    return '<tr><td>'+(i+1)+'</td><td class="pg">'+esc(memberName(o.k))+'</td><td style="white-space:normal;max-width:240px" class="muted">'+(o.pids.map(function(p){return esc(S.pages[p].nom)}).join(', ')||'—')+'</td>'+
-      '<td class="n">'+(o.x.nB?nf(o.x.b):'—')+'</td><td class="n">'+(o.x.nR?nf(o.x.r):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td><td class="n'+(o.c.actifs<3*o.pids.length?' koc':'')+'">'+o.c.actifs+'</td>'+
-      '<td class="num" style="font-size:.76rem">'+(o.last?stampS(o.last):'—')+'</td><td><span class="chip '+EST[o.st][1]+'">'+EST[o.st][0]+'</span></td><td>'+eyeBtn('data-emp-sheet="'+o.k+'"')+'</td></tr>';
+    var rouge=o.st==='retard'||o.st==='objectif';
+    return '<tr'+(rouge?' class="rowko"':'')+'><td>'+(i+1)+'</td><td class="pg">'+(rouge?'<span class="koc" title="Alerte">● </span>':'')+esc(memberName(o.k))+'</td><td style="white-space:normal;max-width:240px" class="muted">'+(o.pids.map(function(p){return esc(S.pages[p].nom)}).join(', ')||'—')+'</td>'+
+      '<td class="n">'+(o.x.nB?nf(o.x.b):'—')+(o.ob?'<div class="muted" style="font-size:.7rem">objectif '+nf(o.ob.cible)+'</div>':'')+'</td><td class="n">'+(o.x.nR?nf(o.x.r):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td><td class="n'+(o.c.actifs<3*o.pids.length?' koc':'')+'">'+o.c.actifs+'</td>'+
+      '<td class="num" style="font-size:.76rem">'+(o.last?stampS(o.last):'—')+'</td><td><span class="chip '+EST[o.st][1]+'">'+EST[o.st][0]+'</span></td><td><div class="row" style="gap:4px;flex-wrap:nowrap">'+eyeBtn('data-emp-sheet="'+o.k+'"')+'<button type="button" class="eye" data-emplink="'+esc(o.k)+'">'+ico('users','ic')+' Voir le lien</button><button type="button" class="eye" data-copy="'+esc(empLink(o.k))+'">Copier le lien</button></div></td></tr>';
   }).join('')||'<tr><td colspan="10" class="empty">Aucun employé pour ces filtres.</td></tr>';
-  return '<div class="box">'+boxHead('users','Suivi des employés','('+dRange(R.a,b)+')','<div class="row"><label class="row" style="gap:6px"><span class="label">Statut</span>'+sel('eStat',[['','Tous'],['actif','Actif'],['verif','À vérifier'],['retard','En retard']],S.eStat)+'</label>'+
+  return '<div class="box">'+boxHead('users','Suivi des employés','('+dRange(R.a,b)+')','<div class="row"><label class="row" style="gap:6px"><span class="label">Statut</span>'+sel('eStat',[['','Tous'],['actif','Actif'],['verif','À vérifier'],['retard','En retard'],['objectif','Objectif non atteint']],S.eStat)+'</label>'+
     '<input type="search" id="eQ" placeholder="Rechercher un employé…" value="'+esc(S.eQ||'')+'" aria-label="Rechercher un employé"></div>')+
     '<div class="tb"><table><thead><tr><th>#</th><th>Employé</th><th>Pages gérées</th><th class="n">Total boost</th><th class="n">Total réels</th><th class="n">Écart</th><th class="n">Boosts actifs</th><th>Dernière saisie</th><th>Statut</th><th>Action</th></tr></thead><tbody>'+html+'</tbody></table></div>'+
-    '<div class="muted" style="font-size:.72rem">En retard : 2 jours non enregistrés (hier et avant-hier) sur une page. À vérifier : 1 jour manquant ou une anomalie.</div></div>';
+    '<div class="muted" style="font-size:.72rem">En rouge : employé en retard (2 jours non enregistrés, hier et avant-hier, sur une page) ou objectif non atteint (messages boost de la période jusqu\'à hier inférieurs à l\'objectif × nombre de jours depuis le '+fmtD(SAISIE_DEBUT)+'). À vérifier : 1 jour manquant ou une anomalie.</div></div>';
 }
 /* Récapitulatif détaillé par page */
 function pageRows(dm,pids,R){
@@ -836,7 +839,7 @@ function gridModel(pid){
   cols.forEach(function(d){
     var c=pm[d], key=pid+'_'+d, ed=S.ed[key], br=brouOf(pid,d), rec=!!(c&&(c.J||c.boostsDuJour||c.totaux.reels!=null));
     /* Saisie = employé seulement ; l'administrateur ne peut que rectifier un jour déjà enregistré */
-    var lock=d>t||d<DEBUT||(S.owner?(!admin||!rec):(rec||d<SAISIE_DEBUT));
+    var lock=!!S.apercu||d>t||d<DEBUT||(S.owner?(!admin||!rec):(rec||d<SAISIE_DEBUT));
     var cm={};if(c)c.counters.forEach(function(b){cm[b.id]=b.messages});
     var col={date:d,key:key,rec:rec,lock:lock,c:c,br:br,cells:{},tot:null,r:null,boosts:[],an:[]};
     var any=false,tot=0;
@@ -916,7 +919,8 @@ function viewSaisie(){
   var body=M.rows.map(function(b){
     var s=statutAt(pid,b.id,t,b.statut), hors=stInfo(s).hors;
     if(hors&&!cols.some(function(d){return M.cols[d].cells[b.id].v!=null})&&!isAdminMode())return '';
-    var act=hors?'<span class="muted">Supprimé</span>':s==='pause'?'<span class="koc">En pause</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Reprendre</button>':'<span class="okc">Actif</span><button type="button" class="bpause" data-bst="'+pid+'|'+b.id+'|pause">'+ico('pause','ic" style="width:12px;height:12px')+' Pause</button>';
+    var act=s==='termine'?'<span class="muted">Terminé</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Relancer</button>':hors?'<span class="muted">Supprimé</span>':s==='pause'?'<span class="koc">En pause</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Reprendre</button>':'<span class="okc">Actif</span><button type="button" class="bpause" data-bst="'+pid+'|'+b.id+'|pause">'+ico('pause','ic" style="width:12px;height:12px')+' Pause</button>';
+    if(!hors)act+='<button type="button" class="link" data-bst="'+pid+'|'+b.id+'|termine" style="font-size:.66rem">Terminer</button>';
     if(isAdminMode()&&!hors)act+='<button type="button" class="link" data-bst="'+pid+'|'+b.id+'|supprime" style="font-size:.66rem">Supprimer</button>';
     return '<tr><td class="bn">'+esc(b.nom)+'</td><td><div class="st">'+act+'</div></td>'+cols.map(function(d){
       var col=M.cols[d], c=col.cells[b.id], id='c_'+d+'_'+b.id;
@@ -965,6 +969,7 @@ function editCell(pid,d,field,bid,val){
   refreshGrid(pid);
 }
 function saveDraft(pid,d){
+  if(roGuard())return;
   if(S.owner)return;
   var key=pid+'_'+d, ed=S.ed[key]; if(!ed||!S.db||!S.me)return;
   var mine=(S.brou[S.me]||{})[key], now=nowD().toISOString();
@@ -984,6 +989,7 @@ function checkDay(pid,d){
   return {M:M,col:col,err:err};
 }
 function askCommit(pid,d){
+  if(roGuard())return;
   if(S.owner){S.msgs.sz={t:'La saisie est faite par l\'employé. L\'administrateur peut seulement rectifier un jour enregistré.',c:'err'};render();return}
   var k=checkDay(pid,d);
   if(k.err.length){S.msgs.sz={t:dLong(d)+' : indique '+k.err.slice(0,3).join(', ')+'.',c:'err'};render();return}
@@ -1049,6 +1055,7 @@ function writeDefs(pid,doc,msg){
   S.db.doc('boosts/'+pid).set(doc).then(function(){S.msgs.sz={t:msg,c:'ok'};render()},function(){S.msgs.sz={t:'Changement refusé.',c:'err'};render()});
 }
 function setBoostStatus(pid,bid,statut){
+  if(roGuard())return;
   var doc=defsFor(pid), d=null;doc.liste.forEach(function(x){if(x.id===bid)d=x});
   if(!d){var b=(latestState(pid,dayMap(),today())||{boosts:[]}).boosts.filter(function(x){return x.id===bid})[0];d={id:bid,nom:b?b.nom:'Boost',creeLe:null,hist:[]};doc.liste.push(d)}
   d.hist=d.hist.filter(function(h){return h.date!==today()});
@@ -1056,6 +1063,7 @@ function setBoostStatus(pid,bid,statut){
   writeDefs(pid,doc,'✓ '+d.nom+' : '+stInfo(statut).l.toLowerCase()+' à partir du '+fmtD(today())+'.');
 }
 function addBoost(pid){
+  if(roGuard())return;
   var doc=defsFor(pid), dm=dayMap(), st=latestState(pid,dm,today()), names={}, n=1;
   (st?st.boosts:[]).concat(doc.liste).forEach(function(b){names[b.nom]=1});
   while(names['Boost '+n])n++;
@@ -1242,6 +1250,7 @@ function askDemande(pid,d,type,anom){
   render(); setTimeout(function(){var m=$('demMsg');if(m)m.focus()},30);
 }
 function sendDemande(){
+  if(S.apercu){S.modal=null;S.msgs.dem='Aperçu : lecture seule, rien n\'est envoyé.';render();return}
   var M=S.modal, txt=($('demMsg')||{}).value||'';
   if(!txt.trim()){$('demErr').textContent='Écris ta demande.';return}
   var doc={type:M.kind,anomalie:M.anom,pageId:M.pid,date:M.d,message:txt.trim(),creeLe:nowD().toISOString(),statut:'ouverte',auteurNom:myName()};
@@ -1542,6 +1551,54 @@ function pageSelect(id,val,withAll){
 }
 function card(l,v,s){return '<div class="card"><span class="label">'+l+'</span><span class="v">'+v+'</span><span class="s">'+(s||'')+'</span></div>'}
 function pctBadge(p){if(p==null||!isFinite(p))return '—';var c=p>0.05?'up':p<-0.05?'down':'flat';return '<span class="d '+c+' plain">'+(c==='up'?'↑ +':c==='down'?'↓ −':'→ ')+Math.abs(p).toFixed(2).replace('.',',')+' %</span>'}
+/* ---------- Objectif de messages, lien de chaque employé, aperçu de l'espace employé ---------- */
+/* Objectif : messages boost par jour et par employé (réglage général, ou propre à l'employé) */
+function objOf(k){var m=S.membres[k]||{};var o=+(m.objectif||S.cfg.objectif||0);return o>0?o:0}
+function objCible(k,a,b){
+  var o=objOf(k), y=addDays(today(),-1), s=a<SAISIE_DEBUT?SAISIE_DEBUT:a, e=b>y?y:b, n=0;
+  for(var d=s;d<=e;d=addDays(d,1))n++;
+  return o&&n>0?{o:o,n:n,cible:o*n}:null;
+}
+/* Lien personnel : ouvre la connexion avec l'identifiant déjà rempli */
+function empCode(k){var m=S.membres[k]||{};return m.code||(/^inv_/.test(k)?k.slice(4):'')}
+function empLink(k){var c=empCode(k);return window.CB_WEB?location.origin+location.pathname+'?id='+encodeURIComponent(c):invLink(c)}
+function linkModal(k){
+  var c=empCode(k), l=empLink(k), nom=memberName(k);
+  var msg=window.CB_WEB?'Bonjour '+nom+', voici ton accès Compte Boost.\nLien : '+l+'\nIdentifiant : '+c+'\nMot de passe : celui que je t\'ai donné':invMessage(k);
+  S.modal={type:'lien',html:'<h2>'+ico('users','ic o')+'Lien de '+esc(nom)+'</h2>'+
+    '<div class="kv"><div><span class="label">Lien personnel</span><b style="word-break:break-all">'+esc(l)+'</b></div><div><span class="label">Identifiant</span><b class="num">'+esc(c)+'</b></div></div>'+
+    (window.CB_WEB&&!(S.membres[k]||{}).compte?'<div class="note r">'+ico('warn')+'<span>Son accès n\'est pas encore créé : va dans Paramètres → « Créer l\'accès ».</span></div>':'')+
+    '<div class="row" style="justify-content:flex-end;flex-wrap:wrap"><button type="button" data-apercu="'+esc(k)+'">'+ico('eye','ic')+' Aperçu de son espace</button><button type="button" data-copy="'+esc(msg)+'">Copier le lien</button><button type="button" class="primary" data-close="1">Fermer</button></div>'};
+  render();
+}
+/* Aperçu sécurisé : l'administrateur voit l'espace de l'employé, sans rien pouvoir enregistrer */
+function roDb(db){
+  var no=function(){return Promise.reject({code:'apercu',message:'Aperçu : lecture seule'})};
+  function wrapDoc(d){return {id:d.id,get:function(){return d.get()},onSnapshot:function(a,b){return d.onSnapshot(a,b)},set:no,update:no,delete:no}}
+  return {doc:function(p){return wrapDoc(db.doc(p))},collection:function(p){var c=db.collection(p);return {doc:function(id){return wrapDoc(c.doc(id))},add:no,get:function(){return c.get()},onSnapshot:function(a,b){return c.onSnapshot(a,b)}}}};
+}
+function startApercu(k){
+  if(!S.owner||S.apercu)return;
+  S.apercu={k:k,saved:{owner:S.owner,me:S.me,myInv:S.myInv,myDoc:S.myDoc,db:S.db,view:S.view,sz:Object.assign({},S.sz)}};
+  S.owner=false; S.me='apercu_'+k; S.myInv=empCode(k); S.myDoc={invitation:S.myInv}; S.db=roDb(S.db);
+  S.view='dash'; S.sz.pid=null; S.sz.role='emp'; S.modal=null; S.ed={}; bump(); render(); window.scrollTo(0,0);
+}
+function stopApercu(){
+  var a=S.apercu; if(!a)return;
+  S.owner=a.saved.owner; S.me=a.saved.me; S.myInv=a.saved.myInv; S.myDoc=a.saved.myDoc; S.db=a.saved.db; S.sz=a.saved.sz; S.ed={};
+  S.apercu=null; S.view='emps'; bump(); render(); window.scrollTo(0,0);
+}
+function apercuBar(){
+  if(!S.apercu)return '';
+  return '<div class="note r" style="position:sticky;top:0;z-index:5;justify-content:space-between;align-items:center">'+ico('eye')+'<span style="flex:1"><b>Aperçu de l\'espace de '+esc(memberName(S.apercu.k))+'</b> · lecture seule : rien n\'est enregistré, les données de l\'employé ne sont pas modifiées.</span><button type="button" class="primary" data-finapercu="1">Quitter l\'aperçu</button></div>';
+}
+function roGuard(){if(!S.apercu)return false;S.msgs.sz={t:'Aperçu : lecture seule, rien n\'est enregistré.',c:'err'};render();return true}
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest&&ev.target.closest('[data-emplink],[data-apercu],[data-finapercu]');if(!b)return;
+  if(b.dataset.emplink)linkModal(b.dataset.emplink);
+  else if(b.dataset.apercu)startApercu(b.dataset.apercu);
+  else stopApercu();
+});
 /* ---------- Version en ligne : un identifiant (le code) et un mot de passe par employé ---------- */
 function siteUrl(){return location.origin+location.pathname}
 function accesTexte(m,pw){return 'Bonjour '+m.nom+', voici ton accès Compte Boost.\nLien : '+siteUrl()+'\nIdentifiant : '+m.code+'\nMot de passe : '+pw}
@@ -1604,7 +1661,7 @@ document.addEventListener('change',function(ev){
 /* ---------- Paramètres ---------- */
 function viewParams(){
   var s='<div class="box">'+boxHead('gear','Réglages des alertes')+'<div class="row"><label class="fl"><span>Seuil « Pages à vérifier » (baisse en %)</span><input type="number" id="seuilIn" min="1" max="90" step="1" value="'+seuil()+'" style="width:120px"></label>'+
-    '<span class="muted" style="font-size:.8rem">Une page passe « à vérifier » quand ses messages boost baissent d\'au moins ce pourcentage par rapport à la période précédente équivalente.</span></div><div class="msg ok">'+(S.msgs.cfg||'')+'</div></div>';
+    '<label class="fl"><span>Objectif de messages boost par jour et par employé</span><input type="number" id="objIn" min="0" step="1" value="'+(S.cfg.objectif||'')+'" placeholder="Aucun" style="width:120px"></label><span class="muted" style="font-size:.8rem">Une page passe « à vérifier » quand ses messages boost baissent d\'au moins ce pourcentage par rapport à la période précédente équivalente.</span></div><div class="msg ok">'+(S.msgs.cfg||'')+'</div></div>';
   return '<div class="grid">'+s+viewEquipe()+'</div>';
 }
 function saveCfg(patch){
@@ -1689,7 +1746,7 @@ function render(){
   var a=document.activeElement, fid=a&&a.id, ss=null;try{if(fid&&a.selectionStart!=null)ss=[a.selectionStart,a.selectionEnd]}catch(e){}
   var body='';try{body=viewBody()}catch(e){body='<div class="box"><p class="empty">Erreur d\'affichage : '+esc(e.message)+'</p></div>';if(window.console)console.error(e)}
   root.className='app'+(S.owner?'':' emp');
-  root.innerHTML=(S.owner?side():'')+'<main class="main">'+topbar()+body+'</main>'+(S.modal?'<div class="ovl" data-ovl="1"><div class="modal'+(S.modal.type==='detail'?'':' sm')+'" role="dialog" aria-modal="true">'+S.modal.html+'</div></div>':'');
+  root.innerHTML=(S.owner?side():'')+'<main class="main">'+apercuBar()+topbar()+body+'</main>'+(S.modal?'<div class="ovl" data-ovl="1"><div class="modal'+(S.modal.type==='detail'?'':' sm')+'" role="dialog" aria-modal="true">'+S.modal.html+'</div></div>':'');
   if(fid){var el=$(fid);if(el&&el!==document.activeElement&&!S.modal){el.focus();try{if(ss)el.setSelectionRange(ss[0],ss[1])}catch(e){}}}
 }
 var pending=false;
@@ -1771,6 +1828,7 @@ document.addEventListener('change',function(ev){
     ePage:function(){S.ePid=v},szPage:function(){S.sz.pid=v;S.ePid=v},szA:function(){S.sz.a=v},szB:function(){S.sz.b=v},hPage:function(){S.hist.page=v},hAut:function(){S.hist.aut=v},hAutP:function(){S.hist.autP=v},hA:function(){S.hist.a=v},hB:function(){S.hist.b=v},anT:function(){S.anT=v},
     dashPage:function(){S.page=v},recapPage:function(){S.page=v},calPage:function(){S.page=v},dA:function(){S.pa=v||null},dB:function(){S.pb=v||null},rA:function(){S.ra=v||null},rB:function(){S.rb=v||null},rEmp:function(){S.rEmp=v},rBoost:function(){S.rBoost=v},rStat:function(){S.rStat=v}};
   if(map[el.id]){map[el.id]();render();return}
+  if(el.id==='objIn'){var o=Math.max(0,Math.round(+v||0));saveCfg({objectif:o||null});return}
   if(el.id==='seuilIn'){var n=Math.round(+v);if(n>=1&&n<=90)saveCfg({seuil:n});return}
   if(el.id==='impFile'){if(el.files[0])readImport(el.files[0]);return}
   if(el.id==='impSheet'){S.imp.sheet=v;impGuess();render();return}

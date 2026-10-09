@@ -119,7 +119,9 @@ function showLogin(mode,msg){
   var f=document.getElementById('cbLogin');
   f.onsubmit=function(ev){ev.preventDefault();submit(box.dataset.mode)};
   document.getElementById('cbSwitch').onclick=function(ev){ev.preventDefault();showLogin(box.dataset.mode==='admin'?'login':'admin')};
-  setTimeout(function(){var i=document.getElementById('cbId');if(i)i.focus()},30);
+  var pre=null;try{pre=new URLSearchParams(location.search).get('id')}catch(e){}
+  if(pre&&mode!=='admin'){document.getElementById('cbId').value=pre.toUpperCase();setTimeout(function(){var p=document.getElementById('cbPw');if(p)p.focus()},30)}
+  else setTimeout(function(){var i=document.getElementById('cbId');if(i)i.focus()},30);
 }
 function setMsg(t){var m=box&&box.querySelector('.cb-msg');if(m)m.textContent=t}
 function submit(mode){
