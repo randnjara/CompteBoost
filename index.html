@@ -260,7 +260,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=18"></script><script src="supabase.js?v=18"></script><script src="web.js?v=18"></script>
+<script src="config.js?v=19"></script><script src="supabase.js?v=19"></script><script src="web.js?v=19"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -674,7 +674,8 @@ function chartBlock(sr,mode,W,H){
   if(mode==='ecart')return lineChart(sr.lab,[{n:'Écart journalier (boost − réels)',c:'var(--s3)',v:sr.e,sign:true}],{W:W,H:H});
   return lineChart(sr.lab,[{n:'Messages boost (calcul automatique)',c:'var(--s1)',v:sr.b},{n:'Messages réels (saisis par les employés)',c:'var(--s2)',v:sr.r}],{W:W,H:H});
 }
-function sgSpan(n){return n==null?'<span class="muted">—</span>':'<span class="sg '+(n<0?'down':'up')+'">'+sg(n)+'</span>'}
+/* Écart = boost − réels : positif (réels inférieurs au boost) = rouge ; zéro ou négatif = vert */
+function sgSpan(n){return n==null?'<span class="muted">—</span>':'<span class="sg '+(n>0?'down':'up')+'">'+sg(n)+'</span>'}
 function seuil(){var s=+(S.cfg.seuil);return s>0?s:10}
 
 /* ---------- Tableau de bord administrateur ---------- */
@@ -886,7 +887,7 @@ function dfHtml(cell){
   return '<span class="df mu">—</span>';
 }
 function totHtml(col){return col.tot==null?'<span class="muted">—</span>':'<span class="okc">+'+nf(col.tot)+'</span>'}
-function ecHtml(col){return col.ec==null?'<span class="muted">—</span>':'<span class="'+(col.ec===0?'okc':'koc')+'">'+sg(col.ec)+'</span>'}
+function ecHtml(col){return col.ec==null?'<span class="muted">—</span>':'<span class="'+(col.ec>0?'koc':'okc')+'">'+sg(col.ec)+'</span>'}
 function stateHtml(col){
   var s=S.saveState[col.key];
   if(s&&s.st==='saving')return '<span class="when">Sauvegarde en cours…</span>';
@@ -1084,7 +1085,8 @@ function anomaliesOf(dm,pids,a,b){
       if(k<a||k>b)return; var c=d[k];
       c.anomalies.forEach(function(x){out.push({p:p,d:k,type:'baisse',boost:x.nom,desc:'Compteur inférieur au compteur précédent ('+fmtD(x.prevDate)+')',av:x.prev,ap:x.cur})});
       var e=c.totaux.ecart,mb=c.totaux.messagesBoosts;
-      if(e!=null&&Math.abs(e)>=Math.max(5,(mb||0)*0.2))out.push({p:p,d:k,type:'ecart',boost:'Tous les boosts',desc:e<0?'Messages réels supérieurs au total des messages boost':'Messages boost très supérieurs aux messages réels',av:mb,ap:c.totaux.reels});
+      /* Réels > boost est normal (l'employé peut lancer lui-même des conversations) ; réels < boost = anomalie */
+      if(e!=null&&e>0)out.push({p:p,d:k,type:'ecart',boost:'Tous les boosts',desc:'Messages réels inférieurs au total des messages boost',av:mb,ap:c.totaux.reels});
     });
     for(var k=a<SAISIE_DEBUT?SAISIE_DEBUT:a;k<=b&&k<t;k=addDays(k,1)){if(dayStatus(p,k,dm)==='non'&&respAt(p,k))out.push({p:p,d:k,type:'manquant',boost:'—',desc:'Jour non enregistré',av:null,ap:null})}
   });
