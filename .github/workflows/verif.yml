@@ -1,0 +1,27 @@
+name: Vérification du site
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Adresse du site à vérifier (vide = copie locale du dépôt)
+        required: false
+  push:
+    branches: [main]
+    paths: ['index.html', 'web.js', 'config.js', 'tests/**', '.github/workflows/verif.yml']
+jobs:
+  verif:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm i playwright@1.47.2 && npx playwright install --with-deps chromium
+      - name: Servir le site
+        run: python3 -m http.server 8080 >/dev/null 2>&1 &
+      - name: Vérifier
+        env:
+          SITE: ${{ github.event.inputs.site || 'http://localhost:8080/' }}
+        run: sleep 2 && node tests/verif.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: captures, path: 'verif-*.png' }
