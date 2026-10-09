@@ -5,6 +5,10 @@ on:
       site:
         description: Adresse du site à vérifier (vide = copie locale du dépôt)
         required: false
+      diag:
+        description: Diagnostic de l'inscription
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['index.html', 'web.js', 'config.js', 'tests/**', '.github/workflows/verif.yml']
@@ -22,6 +26,9 @@ jobs:
         env:
           SITE: ${{ github.event.inputs.site || 'http://localhost:8080/' }}
         run: sleep 2 && node tests/verif.mjs
+      - name: Diagnostic inscription
+        if: ${{ github.event.inputs.diag == 'true' }}
+        run: node tests/diag.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: captures, path: 'verif-*.png' }
