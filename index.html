@@ -260,7 +260,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=25"></script><script src="supabase.js?v=25"></script><script src="web.js?v=25"></script>
+<script src="config.js?v=26"></script><script src="supabase.js?v=26"></script><script src="web.js?v=26"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -470,10 +470,17 @@ function actifsRemplis(boosts,filled){var n=0;(boosts||[]).forEach(function(b){i
 /* Comptes actuels d'une page : actifs = boosts actifs remplis au dernier jour où des compteurs ont été saisis */
 function comptesPage(pid,dm,upTo){
   var st=latestState(pid,dm,upTo);if(!st)return null;
-  var c=comptes(st.boosts), days=Object.keys(dm[pid]||{}).filter(function(d){return !upTo||d<=upTo}).sort(), f=null;
-  for(var i=days.length-1;i>=0&&!f&&days[i]>=ACTIF_DEPUIS;i--)f=dm[pid][days[i]].filled;
+  var c=comptes(st.boosts), f=filledAt(pid,dm,upTo);
   c.actifs=f?actifsRemplis(st.boosts,f):0;
   return c;
+}
+/* Comptes d'une liste de boosts avec la règle « actif = rempli » */
+function comptesRemplis(pid,dm,upTo,boosts){var c=comptes(boosts),f=filledAt(pid,dm,upTo);c.actifs=f?actifsRemplis(boosts,f):0;return c}
+/* Boosts remplis au dernier jour de compteurs (à partir du 05/10) */
+function filledAt(pid,dm,upTo){
+  var days=Object.keys(dm[pid]||{}).filter(function(d){return !upTo||d<=upTo}).sort(), f=null;
+  for(var i=days.length-1;i>=0&&!f&&days[i]>=ACTIF_DEPUIS;i--)f=dm[pid][days[i]].filled;
+  return f;
 }
 function latestState(pid,dm,upTo){
   var days=Object.keys(dm[pid]||{}).filter(function(d){return !upTo||d<=upTo}).sort();
@@ -1352,7 +1359,7 @@ function viewRecap(){
   var P=clampP(periode(S.rp,null,S.ra,S.rb)), PP=prevRange(P), ids=inPages(f), pl=rangeLabel(P);
   var cur=rangeAgg(dm,P.a,P.b,ids,f), prv=rangeAgg(dm,PP.a,PP.b,ids,f);
   var a=mv(cur), b=mv(prv), C={actifs:0,pause:0,renseignes:0};
-  ids.forEach(function(pid){var st=latestState(pid,dm,P.b);if(!st)return;var bs=st.boosts.filter(function(x){return(!f.boost||x.nom===f.boost)&&(!f.statut||x.statut===f.statut)});var c=comptes(bs);C.actifs+=c.actifs;C.pause+=c.pause;C.renseignes+=c.renseignes});
+  ids.forEach(function(pid){var st=latestState(pid,dm,P.b);if(!st)return;var bs=st.boosts.filter(function(x){return(!f.boost||x.nom===f.boost)&&(!f.statut||x.statut===f.statut)});var c=comptesRemplis(pid,dm,P.b,bs);C.actifs+=c.actifs;C.pause+=c.pause;C.renseignes+=c.renseignes});
   /* Options des filtres */
   var mids=Object.keys(S.membres), bnames={};
   pageIds(S.page).forEach(function(pid){var st=latestState(pid,dm);(st?st.boosts:[]).forEach(function(x){if(!stInfo(x.statut).hors)bnames[x.nom]=1})});
@@ -1368,7 +1375,7 @@ function viewRecap(){
   var cards='<div class="cards">'+
     card('Messages boosts',cur.nB?nf(cur.b):'—',pl)+
     card('Messages réels',cur.nR?nf(cur.r):'—',pl)+
-    card('Différence',cd==null?'—':delta(cd,{plain:true}),'boosts − réels')+
+    card('Différence',cd==null?'—':delta(cd,{plain:true}),'réels − boost')+
     card('Période précédente',nf(b),'<span class="muted">'+short(PP.a)+' – '+short(PP.b)+' · '+mLabel()+'</span>')+
     card('Évolution',a!=null&&b!=null?pctBadge(pct(a,b)):'—',a!=null&&b!=null?delta(a-b)+' <span class="muted">'+mLabel()+'</span>':'')+
     card('Comptes Boost',C.renseignes?'<span class="okc">'+C.actifs+'</span><span class="muted" style="font-weight:600">/'+C.renseignes+'</span>':'—','<span class="chip ok">'+C.actifs+' actif'+(C.actifs>1?'s':'')+'</span> <span class="chip todo">'+C.pause+' en pause</span>')+'</div>';
@@ -1378,7 +1385,7 @@ function viewRecap(){
     var x=cur.pages[pid], y=prv.pages[pid], vx=mv(x), vy=mv(y), st=latestState(pid,dm,P.b);
     ['b','r','nB','nR','nBR','bBR','rBR'].forEach(function(k){T[k]+=x[k]}); T.p+=vy||0;
     if(!x.nB&&!x.nR&&vy==null)return '';
-    return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td>'+comptesHtml(st?comptes(st.boosts):null)+'</td>'+
+    return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td>'+comptesHtml(comptesPage(pid,dm,P.b))+'</td>'+
       '<td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nf(x.r):'—')+'</td><td>'+delta(diffOf(x))+'</td><td class="n muted">'+nf(vy)+'</td><td>'+(vx!=null&&vy!=null?delta(vx-vy,{pct:pct(vx,vy)}):'<span class="muted">—</span>')+'</td></tr>';
   }).join('');
   var vT=S.mesure==='r'?T.r:T.b;
