@@ -260,7 +260,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=27"></script><script src="supabase.js?v=27"></script><script src="web.js?v=27"></script>
+<script src="config.js?v=28"></script><script src="supabase.js?v=28"></script><script src="web.js?v=28"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -592,8 +592,9 @@ function dayStatus(pid,date,dm){
 var DSTAT={importe:['Importé depuis Excel','bl'],avant:['Pas de relevé Excel','no'],enregistre:['Enregistré','ok'],rectifie:['Rectifié','wa'],brouillon:['Brouillon','bl'],non:['Non effectué','ko'],attente:['En attente','no']};
 /* Heure d'enregistrement affichée : jamais d'heure inventée pour les relevés importés d'Excel */
 function isImp(c){return !!(c&&(c.import||c.J&&c.J.source==='import'))}
-function impDate(pid){var x=(S.histImp||{})[pid];return x?fmtD(ymdOf(x)):'—'}
-function whenTxt(c){if(!c)return '—';if(isImp(c))return 'Importé d\'Excel le '+impDate(c.pageId);return stamp(c.J?c.J.enregistreLe:c.horodatage)}
+/* Date d'import Excel du jour (plusieurs imports possibles pour une page) */
+function impDate(pid,date){var H=S.histImp||{}, x=date&&(pid+'|'+date) in H?H[pid+'|'+date]:H[pid];return x?fmtD(ymdOf(x)):'—'}
+function whenTxt(c){if(!c)return '—';if(isImp(c))return 'Importé d\'Excel le '+impDate(c.pageId,c.date);return stamp(c.J?c.J.enregistreLe:c.horodatage)}
 function isDone(s){return s==='enregistre'||s==='rectifie'||s==='importe'}
 function dsChip(s){var x=DSTAT[s]||['—','no'];return '<span class="chip '+x[1]+'">'+x[0]+'</span>'}
 
@@ -934,7 +935,7 @@ function stateHtml(col){
 }
 function savedHtml(col){
   var c=col.c, J=c&&c.J, r=J&&J.rectifs||[];
-  if(isImp(c))return '<div class="saved" style="color:var(--pro)">'+(r.length?'✓ Rectifié':'✓ Importé')+'<span class="when">depuis Excel<br>le '+impDate(c.pageId)+'</span></div>';
+  if(isImp(c))return '<div class="saved" style="color:var(--pro)">'+(r.length?'✓ Rectifié':'✓ Importé')+'<span class="when">depuis Excel<br>le '+impDate(c.pageId,c.date)+'</span></div>';
   var when=J?J.enregistreLe:c&&c.horodatage, who=J?(J.auteurNom||memberName(J.auteur)):memberName(c&&c.auteur);
   return '<div class="saved'+(r.length?' rect':'')+'">'+(r.length?'✓ Rectifié':'✓ Enregistré')+'<b class="num">'+(when?stamp(when).replace(' ','<br>'):'—')+'</b><span class="when">'+esc(who)+'</span></div>';
 }
@@ -1931,7 +1932,7 @@ function watch(){
       out.push({id:j.id,pageId:h.pageId,auteur:'import',fromHist:true,horodatage:j.horodatage,date:j.date,jour:j.jour,heure:j.heure,mode:'cumul',totaux:j.totaux,
         boosts:(j.boosts||[]).map(function(b){return{id:b.id,nom:b.nom||'Boost '+b.id.slice(1),statut:b.statut||'actif',messages:b.messages,nouveaux:b.nouveaux}})});
     })});
-    var hp={},hi={};out.forEach(function(e){hp[e.pageId]=1});snap.docs.forEach(function(d){var h=d.data();hi[h.pageId]=h.importeLe||null});S.histPages=hp;S.histImp=hi;
+    var hp={},hi={};out.forEach(function(e){hp[e.pageId]=1});snap.docs.forEach(function(d){var h=d.data();if(!(h.pageId in hi))hi[h.pageId]=h.importeLe||null;(h.jours||[]).forEach(function(j){hi[h.pageId+'|'+j.date]=h.importeLe||null})});S.histPages=hp;S.histImp=hi;
     S.entries.historique=out; bump(); soft();
   },function(){});
 }
