@@ -260,7 +260,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=22"></script><script src="supabase.js?v=22"></script><script src="web.js?v=22"></script>
+<script src="config.js?v=23"></script><script src="supabase.js?v=23"></script><script src="web.js?v=23"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -445,9 +445,11 @@ function dayMap(){
       var snap={};Object.keys(cum).forEach(function(k){snap[k]=cum[k]});ca.push({date:d,cum:snap});
       if(d<DEBUT){S.preB[pid]=lastB?lastB.boosts:[];return}
       var last=es[es.length-1], boosts=boostList(pid,d,lastB?lastB.boosts:[]), c=comptes(boosts);
+      /* Un boost n'est compté actif ce jour-là que si son compteur a été rempli */
+      var filled=null;if(wC){filled={};wC.boosts.forEach(function(b){if(b.messages!=null&&b.messages!=='')filled[b.id]=1});c.actifs=actifsRemplis(boosts,filled)}
       var r=wR?wR.totaux.reels:null;
       out[d]={pageId:pid,date:d,jour:last.jour,heure:J?J.heure:last.heure,horodatage:J?J.horodatage:last.horodatage,auteur:(J||wR||last).auteur,boosts:boosts,boostsDuJour:!!wC,entries:es,reelEntry:wR,
-        J:J?J.doc:null,jourId:J?J.jourId:null,import:!J&&last.auteur==='import',nv:nv,ref:ref,anomalies:an,counters:wC?wC.boosts:[],
+        J:J?J.doc:null,jourId:J?J.jourId:null,filled:filled,import:!J&&last.auteur==='import',nv:nv,ref:ref,anomalies:an,counters:wC?wC.boosts:[],
         totaux:{actifs:c.actifs,pause:c.pause,supprimes:c.supprimes,renseignes:c.renseignes,total:c.renseignes,messagesBoosts:mb,reels:r,ecart:mb!=null&&r!=null?r-mb:null}};
       if(J){J.totaux.messagesBoosts=mb}
     });
@@ -462,6 +464,15 @@ function cumBefore(pid,date){
   return Object.assign({},r); /* copie : la grille ne doit pas modifier les compteurs gardés */
 }
 function pageIds(filter){return Object.keys(S.pages).filter(function(id){return !S.pages[id].archivee&&(filter==null||filter==='all'||filter===id)}).sort(function(a,b){return S.pages[a].nom.localeCompare(S.pages[b].nom)})}
+function actifsRemplis(boosts,filled){var n=0;(boosts||[]).forEach(function(b){if(stInfo(b.statut).actif&&filled[b.id])n++});return n}
+/* Comptes actuels d'une page : actifs = boosts actifs remplis au dernier jour où des compteurs ont été saisis */
+function comptesPage(pid,dm,upTo){
+  var st=latestState(pid,dm,upTo);if(!st)return null;
+  var c=comptes(st.boosts), days=Object.keys(dm[pid]||{}).filter(function(d){return !upTo||d<=upTo}).sort(), f=null;
+  for(var i=days.length-1;i>=0&&!f;i--)f=dm[pid][days[i]].filled;
+  c.actifs=f?actifsRemplis(st.boosts,f):0;
+  return c;
+}
 function latestState(pid,dm,upTo){
   var days=Object.keys(dm[pid]||{}).filter(function(d){return !upTo||d<=upTo}).sort();
   if(days.length){var x=dm[pid][days[days.length-1]];if(upTo&&upTo>x.date)return {boosts:boostList(pid,upTo,x.boosts),totaux:{}};return x}
@@ -695,7 +706,7 @@ function pagesOf(k){return pageIds().filter(function(p){return empKey(S.pages[p]
 function empPageIds(){return pageIds().filter(function(p){return !S.f.emp||empKey(S.pages[p].responsable)===S.f.emp})}
 function nbConf(dm,p){var st=latestState(p,dm,today());return st?comptes(st.boosts).renseignes:0}
 function fIds(){var f=S.f;return pageIds(f.page).filter(function(p){return !f.emp||empKey(S.pages[p].responsable)===f.emp})}
-function actifsOf(dm,ids,date){var c={actifs:0,pause:0,renseignes:0};ids.forEach(function(p){var st=latestState(p,dm,date);if(st){var x=comptes(st.boosts);c.actifs+=x.actifs;c.pause+=x.pause;c.renseignes+=x.renseignes}});return c}
+function actifsOf(dm,ids,date){var c={actifs:0,pause:0,renseignes:0};ids.forEach(function(p){var x=comptesPage(p,dm,date);if(x){c.actifs+=x.actifs;c.pause+=x.pause;c.renseignes+=x.renseignes}});return c}
 function kpi(icon,cls,title,sub,val,vcls,right,foot){
   return '<div class="kpi">'+tile(icon,cls)+'<div><div class="t">'+title+'<small>'+sub+'</small></div><div class="row2"><span class="v '+(vcls||'')+'">'+val+'</span><span class="cmp">'+(right||'')+'</span></div>'+(foot?'<div class="s">'+foot+'</div>':'')+'</div></div>';
 }
@@ -752,7 +763,7 @@ function viewDash(){
   var withEv=prows.filter(function(o){return o.ev!=null});
   var best=withEv.filter(function(o){return o.ev>0}).sort(function(a,b){return b.ev-a.ev}).slice(0,3);
   var bad=withEv.filter(function(o){return o.ev<=-seuil()&&nbConf(dm,o.p)>0}).sort(function(a,b){return a.ev-b.ev}).slice(0,6);
-  var low=ids.map(function(p){var st=latestState(p,dm,t),c=st?comptes(st.boosts):null;return {p:p,c:c}}).filter(function(o){return o.c&&o.c.renseignes>0&&o.c.actifs<3}).sort(function(a,b){return a.c.actifs-b.c.actifs});
+  var low=ids.map(function(p){var c=comptesPage(p,dm,t);return {p:p,c:c}}).filter(function(o){return o.c&&o.c.renseignes>0&&o.c.actifs<3}).sort(function(a,b){return a.c.actifs-b.c.actifs});
   var rank=function(L,cls){return L.map(function(o,i){return '<tr class="click" data-page-sheet="'+o.p+'"><td><span class="rk '+cls+'">'+(i+1)+'</span></td><td class="pg">'+esc(S.pages[o.p].nom)+'</td><td>'+evo(o.x.b,o.z.b)+'</td><td class="n">'+nf(o.x.b)+'</td></tr>'}).join('')};
   var three='<div class="grid g3">'+
     '<div class="box">'+boxHead('trophy','Pages avec les meilleurs résultats','(plus forte progression)','','g')+'<div class="tb"><table><thead><tr><th>#</th><th>Page</th><th>Évolution</th><th class="n">Messages</th></tr></thead><tbody>'+(rank(best,'g')||'<tr><td colspan="4" class="empty">Aucune page en progression sur cette période.</td></tr>')+'</tbody></table></div></div>'+
@@ -792,7 +803,7 @@ function suiviEmployes(dm,R){
 function pageRows(dm,pids,R){
   var E=equiv(S.rpType,R), t=today();
   return pids.map(function(p){
-    var x=E.cur?rangeAgg(dm,E.cur.a,E.cur.b,[p]):rangeAgg(dm,'9','9',[p]), z=E.prev?rangeAgg(dm,E.prev.a,E.prev.b,[p]):null, st=latestState(p,dm,t), c=st?comptes(st.boosts):{actifs:0,pause:0,renseignes:0};
+    var x=E.cur?rangeAgg(dm,E.cur.a,E.cur.b,[p]):rangeAgg(dm,'9','9',[p]), z=E.prev?rangeAgg(dm,E.prev.a,E.prev.b,[p]):null, st=latestState(p,dm,t), c=comptesPage(p,dm,t)||{actifs:0,pause:0,renseignes:0};
     var ev=x.nB&&z&&z.nB&&z.b?pct(x.b,z.b):null, an=0;Object.keys(dm[p]||{}).forEach(function(d){if(d>=R.a&&d<=R.b)an+=dm[p][d].anomalies.length});
     var nob=c.renseignes===0, verif=!nob&&((ev!=null&&ev<=-seuil())||c.actifs<3)||an>0;
     return {p:p,x:x,z:z,c:c,ev:ev,an:an,verif:verif,nob:nob};
@@ -883,7 +894,10 @@ function gridModel(pid){
     if(rv!=null){M.perR+=rv;M.perRN++}
     M.cols[d]=col;
   });
-  M.actifs=comptes(rows.map(function(b){return {statut:statutAt(pid,b.id,t,b.statut)}})).actifs;
+  /* Boosts actifs = boosts actifs dont le compteur est rempli (aujourd'hui, sinon le dernier jour rempli) */
+  var cd=null;cols.forEach(function(d){if(d<=t&&rows.some(function(b){return M.cols[d].cells[b.id].v!=null}))cd=d});
+  if(cd){M.actifs=rows.filter(function(b){return stInfo(statutAt(pid,b.id,cd,b.statut)).actif&&M.cols[cd].cells[b.id].v!=null}).length}
+  else{var cp=comptesPage(pid,dm,t);M.actifs=cp?cp.actifs:0}
   return M;
 }
 function dfHtml(cell){
@@ -955,7 +969,7 @@ function viewSaisie(){
   var grid='<div class="tb" style="border:0"><table class="sgrid"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>';
   var bottom='<div class="grid g3"><div class="kpi">'+tile('send','l')+'<div><div class="t">Total messages · période affichée</div><span class="v b" id="szPer">'+(M.perN?nf(M.per):'—')+'</span></div></div>'+
     '<div class="kpi">'+tile('msg','l')+'<div><div class="t">Total messages réels · période affichée</div><span class="v b" id="szPerR">'+(M.perRN?nf(M.perR):'—')+'</span></div></div>'+
-    '<div class="kpi">'+tile('layers','l')+'<div><div class="t">Boosts actifs</div><span class="v g">'+M.actifs+'</span></div></div></div>';
+    '<div class="kpi">'+tile('layers','l')+'<div><div class="t">Boosts actifs</div><span class="v g" id="szAct2">'+M.actifs+'</span></div></div></div>';
   var note=S.owner?'<div class="note">'+ico('info')+'<span>La saisie est faite par les employés. En mode <b>Administrateur</b>, tu peux seulement rectifier un jour déjà enregistré : change le chiffre puis clique sur <b>Rectifier</b> et indique le motif. La valeur d\'origine est conservée. Le mode <b>Employé</b> montre la grille telle que l\'employé la voit (lecture seule).</span></div>':'<div class="note">'+ico('info')+'<span>Tes chiffres sont gardés automatiquement en brouillon pendant la saisie. Clique sur <b>Enregistrer</b> sous le jour pour le valider : l\'heure (Madagascar, UTC+3, '+(window.CB_WEB?'heure du serveur':'selon l\'horloge de ton appareil')+') est notée et le jour est verrouillé. '+(S.owner?'En mode Administrateur, tu peux rectifier un jour enregistré avec un motif ; la valeur d\'origine est conservée.':'Seul l\'administrateur peut rectifier un jour enregistré : utilise « Demander une rectification » dans l\'historique de la page.')+'</span></div>';
   var msg='<div class="msg '+((S.msgs.sz||{}).c||'')+'" role="status">'+((S.msgs.sz||{}).t||'')+'</div>';
   return '<div class="box" style="max-width:1100px">'+head+who+tog+nav+bar+grid+msg+bottom+note+
@@ -973,6 +987,7 @@ function refreshGrid(pid){
   });
   var p=$('szPer');if(p)p.textContent=M.perN?nf(M.per):'—';
   p=$('szPerR');if(p)p.textContent=M.perRN?nf(M.perR):'—';
+  ['szAct','szAct2'].forEach(function(id){var e=$(id);if(e)e.textContent=M.actifs});
 }
 /* Brouillon : enregistré automatiquement (petit délai), jamais compté dans les statistiques */
 var draftTimers={};
@@ -1121,7 +1136,7 @@ function viewEmpDash(pids,forAdmin){
   var pid=S.ePid, dm=dayMap(), t=today(), y=addDays(t,-1), ids=[pid], ref=S.eRef||t, w0=monday(ref), w1=addDays(w0,6);
   var D=rangeAgg(dm,t,t,ids), Y=rangeAgg(dm,y,y,ids), W=rangeAgg(dm,w0,w1,ids), E=equiv('semaine',{a:w0,b:w1});
   var A=E.cur?rangeAgg(dm,E.cur.a,E.cur.b,ids):null, B=E.prev?rangeAgg(dm,E.prev.a,E.prev.b,ids):null, av=A&&A.nB?A.b:null, bv=B&&B.nB?B.b:null;
-  var st=latestState(pid,dm,t), C=st?comptes(st.boosts):{actifs:0,renseignes:0}, p=S.pages[pid];
+  var st=latestState(pid,dm,t), C=comptesPage(pid,dm,t)||{actifs:0,renseignes:0}, p=S.pages[pid];
   var head='<div class="bh"><h1 style="display:flex;gap:10px;align-items:center">'+tile('chart','l',1)+'<span>Tableau de bord — Employé<small style="display:block">Suivi des performances — Page '+esc(p.nom)+'</small></span></h1><span class="chip ok nodot">UTC+3</span></div>';
   var bar='<div class="fbar"><span class="logo">f</span><label class="fl"><span>Page Facebook</span>'+sel('ePage',pids.map(function(x){return [x,S.pages[x].nom]}),pid)+'</label>'+
     '<button type="button" class="small" data-page-sheet="'+pid+'">'+ico('hist','ic')+' Historique de la page</button><span style="margin-left:auto"></span>'+rangeNav('e',{a:w0,b:w1},w0>DEBUT,true)+'</div>';
@@ -1202,7 +1217,7 @@ function viewPageSheet(){
   var pid=S.sheetPid; if(!pid||!S.pages[pid]||!canSeePage(pid))return '<div class="box"><p class="empty">Page introuvable.</p></div>';
   var dm=dayMap(), p=S.pages[pid], t=today(), H=S.hist, F=histFilter('h',H), days=daysDesc(F.R.a,F.R.b).filter(function(d){return !H.autP||authorOf((dm[pid]||{})[d])===H.autP}), pairs=days.map(function(d){return {p:pid,d:d}});
   var aff=affectations(pid), anciens=aff.filter(function(a){return a.fin}).map(function(a){return memberName(a.resp)+' ('+fmtD(a.debut)+' – '+fmtD(a.fin)+')'});
-  var st=latestState(pid,dm,t), C=st?comptes(st.boosts):{actifs:0,pause:0,renseignes:0}, ds=Object.keys(dm[pid]||{}).sort(), last=ds.length?dm[pid][ds[ds.length-1]]:null;
+  var st=latestState(pid,dm,t), C=comptesPage(pid,dm,t)||{actifs:0,pause:0,renseignes:0}, ds=Object.keys(dm[pid]||{}).sort(), last=ds.length?dm[pid][ds[ds.length-1]]:null;
   var info='<div class="kv"><div><span class="label">Employé actuel</span><b>'+esc(memberName(p.responsable))+'</b></div><div><span class="label">Anciens employés</span><b>'+(anciens.length?esc(anciens.join(', ')):'—')+'</b></div><div><span class="label">Début du suivi</span><b>'+fmtD(DEBUT)+'</b></div>'+
     '<div><span class="label">Boosts (actifs / pause / total)</span><b><span class="okc">'+C.actifs+'</span> / <span class="koc">'+C.pause+'</span> / '+C.renseignes+'</b></div><div><span class="label">Dernier enregistrement</span><b>'+(last?jc(last.date)+' '+fmtD(last.date):'—')+'</b></div></div>';
   var rows=days.map(function(d){return histRow(pid,d,dm,false,true)}).join('')||'<tr><td colspan="9" class="empty">Aucun jour sur cette période.</td></tr>';
