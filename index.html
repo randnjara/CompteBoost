@@ -261,7 +261,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=30"></script><script src="supabase.js?v=30"></script><script src="web.js?v=30"></script>
+<script src="config.js?v=31"></script><script src="supabase.js?v=31"></script><script src="web.js?v=31"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -478,6 +478,8 @@ function comptesPage(pid,dm,upTo){
 /* Comptes d'une liste de boosts avec la règle « actif = rempli » */
 function comptesRemplis(pid,dm,upTo,boosts){var c=comptes(boosts),f=filledAt(pid,dm,upTo);c.actifs=f?actifsRemplis(boosts,f):0;return c}
 /* Boosts remplis au dernier jour de compteurs (à partir du 05/10) */
+/* Page active à une date : au moins un boost actif rempli (règle des Boosts actifs). Sinon pas de retard compté. */
+function pageActive(pid,dm,date){var c=comptesPage(pid,dm,date);return !!(c&&c.actifs>0)}
 function filledAt(pid,dm,upTo){
   var days=Object.keys(dm[pid]||{}).filter(function(d){return !upTo||d<=upTo}).sort(), f=null;
   for(var i=days.length-1;i>=0&&!f&&days[i]>=ACTIF_DEPUIS;i--)f=dm[pid][days[i]].filled;
@@ -796,7 +798,7 @@ function empRow(dm,k,a,b){
   pids.forEach(function(p){
     Object.keys(dm[p]||{}).forEach(function(d){var e=dm[p][d];if(empKey(e.auteur)===k&&(!last||e.horodatage>last))last=e.horodatage;if(d>=a&&d<=b)an+=e.anomalies.length});
     var aff=affectations(p).filter(function(z){return z.resp&&empKey(z.resp)===k&&!z.fin}).pop(), start=aff?aff.debut:DEBUT;
-    [addDays(t,-1),addDays(t,-2)].forEach(function(d){if(d>=start&&d>=SAISIE_DEBUT&&dayStatus(p,d,dm)==='non')miss++});
+    [addDays(t,-1),addDays(t,-2)].forEach(function(d){if(d>=start&&d>=SAISIE_DEBUT&&dayStatus(p,d,dm)==='non'&&pageActive(p,dm,d))miss++});
   });
   var ob=objCible(k,a,b), sous=!!(ob&&pids.length&&(x.nB?x.b:0)<ob.cible);
   var st=!pids.length?'none':miss>=2?'retard':sous?'objectif':(miss||an||ecartNeg(dm,pids,a,b,x))?'verif':'actif';
@@ -1134,7 +1136,7 @@ function anomaliesOf(dm,pids,a,b){
       /* Réels > boost est normal (l'employé peut lancer lui-même des conversations) ; réels < boost = anomalie */
       if(e!=null&&e<0)out.push({p:p,d:k,type:'ecart',boost:'Tous les boosts',desc:'Messages réels inférieurs au total des messages boost',av:mb,ap:c.totaux.reels});
     });
-    for(var k=a<SAISIE_DEBUT?SAISIE_DEBUT:a;k<=b&&k<t;k=addDays(k,1)){if(dayStatus(p,k,dm)==='non'&&respAt(p,k))out.push({p:p,d:k,type:'manquant',boost:'—',desc:'Jour non enregistré',av:null,ap:null})}
+    for(var k=a<SAISIE_DEBUT?SAISIE_DEBUT:a;k<=b&&k<t;k=addDays(k,1)){if(dayStatus(p,k,dm)==='non'&&respAt(p,k)&&pageActive(p,dm,k))out.push({p:p,d:k,type:'manquant',boost:'—',desc:'Jour non enregistré',av:null,ap:null})}
   });
   return out.sort(function(x,y){return x.d<y.d?1:x.d>y.d?-1:0});
 }
