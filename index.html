@@ -180,6 +180,7 @@ button:disabled{opacity:.5;cursor:default}
 .sgrid .cell.lock{background:var(--soft)}
 .sgrid .cell.lock input{color:var(--ink)}
 .sgrid .cell.an{border-color:var(--down)}
+.sgrid .rin.rbas{color:var(--down)}
 .sgrid .rin{border:1px solid var(--line);border-radius:8px;text-align:center;width:76px;padding:6px 2px;font-weight:700}
 .sgrid .st{display:grid;gap:3px;justify-items:center;font-weight:700;font-size:.74rem}
 .sgrid .st button{font-size:.7rem;padding:2px 8px;border-radius:999px}
@@ -260,7 +261,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=29"></script><script src="supabase.js?v=29"></script><script src="web.js?v=29"></script>
+<script src="config.js?v=30"></script><script src="supabase.js?v=30"></script><script src="web.js?v=30"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -598,6 +599,8 @@ function impDate(pid,date){var H=S.histImp||{}, x=date&&(pid+'|'+date) in H?H[pi
 function whenTxt(c){if(!c)return '—';if(isImp(c))return 'Importé d\'Excel le '+impDate(c.pageId,c.date);return stamp(c.J?c.J.enregistreLe:c.horodatage)}
 function isDone(s){return s==='enregistre'||s==='rectifie'||s==='importe'}
 /* Case vide d'un jour à remplir (aujourd'hui compris) : en rouge */
+/* Messages réels : en rouge quand ils sont inférieurs aux messages boost */
+function nfR(x){var e=diffOf(x);return e!=null&&e<0?'<span class="koc">'+nf(x.r)+'</span>':nf(x.r)}
 function vide(d){return d<=today()&&d>=SAISIE_DEBUT?'<span class="koc" title="Non effectué">—</span>':'—'}
 function dsChip(s){var x=DSTAT[s]||['—','no'];return '<span class="chip '+x[1]+'">'+x[0]+'</span>'}
 
@@ -738,7 +741,7 @@ function viewDash(){
   var D=rangeAgg(dm,t,t,ids), Y=rangeAgg(dm,y,y,ids), C=actifsOf(dm,ids,t), de=diffOf(D);
   var kp='<div class="kpis">'+
     kpi('msg','b','Total messages aujourd\'hui','('+scope+' - Boost)',D.nB?nf(D.b):'—','',(D.nB?evo(D.b,Y.nB?Y.b:null):'')+'<br>vs hier ('+(Y.nB?nf(Y.b):'—')+')')+
-    kpi('msg','g','Total messages réels aujourd\'hui','('+scope+')',D.nR?nf(D.r):'—','',(D.nR?evo(D.r,Y.nR?Y.r:null):'')+'<br>vs hier ('+(Y.nR?nf(Y.r):'—')+')')+
+    kpi('msg','g','Total messages réels aujourd\'hui','('+scope+')',D.nR?nfR(D):'—','',(D.nR?evo(D.r,Y.nR?Y.r:null):'')+'<br>vs hier ('+(Y.nR?nfR(Y):'—')+')')+
     kpi('scale','o','Écart aujourd\'hui','(Réels − Boost)',de==null?'—':sg(de),de==null?'o':de<0?'r':'g','',de==null?'Réels ou compteurs manquants':'')+
     kpi('layers','l','Total boosts actifs','('+scope+')',String(C.actifs),'g','','sur '+C.renseignes+' boosts')+
     kpi('pause','r','Total boosts en pause','('+scope+')',String(C.pause),'r','','sur '+C.renseignes+' boosts')+'</div>';
@@ -746,11 +749,11 @@ function viewDash(){
   var w0=f.type==='semaine'?R.a:monday(R.b>t?t:R.b), W=rangeAgg(dm,w0,addDays(w0,6),ids);
   var head='<th>Jour</th>',rb='',rr='',re='';
   for(var i=0;i<7;i++){var d=addDays(w0,i),x=W.days[d],td=d===t?' today':'';head+='<th class="c'+td+'">'+JC[i]+' '+d.slice(8)+'</th>';
-    rb+='<td class="n'+td+'">'+(x&&x.nB?nf(x.b):vide(d))+'</td>';rr+='<td class="n'+td+'">'+(x&&x.nR?nf(x.r):vide(d))+'</td>';re+='<td class="n'+td+'">'+sgSpan(x?diffOf(x):null)+'</td>'}
+    rb+='<td class="n'+td+'">'+(x&&x.nB?nf(x.b):vide(d))+'</td>';rr+='<td class="n'+td+'">'+(x&&x.nR?nfR(x):vide(d))+'</td>';re+='<td class="n'+td+'">'+sgSpan(x?diffOf(x):null)+'</td>'}
   var rec='<div class="box">'+boxHead('cal','Récapitulatif des 7 jours','('+scope.toLowerCase()+')','<span class="label">'+dRange(w0,addDays(w0,6))+'</span>')+
     '<div class="tb"><table class="rec"><thead><tr>'+head+'<th class="c tot">TOTAL</th></tr></thead><tbody>'+
     '<tr><td><span class="rl">'+ico('send','ic')+'Messages boost</span></td>'+rb+'<td class="n tot">'+(W.nB?nf(W.b):'—')+'</td></tr>'+
-    '<tr><td><span class="rl">'+ico('msg','ic g')+'Messages réels</span></td>'+rr+'<td class="n tot">'+(W.nR?nf(W.r):'—')+'</td></tr>'+
+    '<tr><td><span class="rl">'+ico('msg','ic g')+'Messages réels</span></td>'+rr+'<td class="n tot">'+(W.nR?nfR(W):'—')+'</td></tr>'+
     '<tr><td><span class="rl">'+ico('scale','ic')+'Écart</span></td>'+re+'<td class="n tot">'+sgSpan(diffOf(W))+'</td></tr></tbody></table></div></div>';
   /* Comparaison des périodes */
   var ct=S.cmpT, CR=ct===f.type?R:typeRange(ct,ct==='periode'?null:(R.b>t?t:R.b),f.a,f.b), E=equiv(ct,CR);
@@ -770,7 +773,7 @@ function viewDash(){
   prows.sort(function(a,b){return b.x.b-a.x.b});
   var rep='<div class="box">'+boxHead('fb','Répartition par page Facebook','('+{semaine:'semaine',mois:'mois',annee:'année',periode:'période'}[f.type]+')')+
     '<div class="tb" style="max-height:300px;overflow-y:auto"><table><thead><tr><th>Page</th><th></th><th class="n">Boost</th><th class="n">Réels</th><th class="n">Écart</th><th class="c">Évolution</th></tr></thead><tbody>'+
-    (prows.map(function(o){return '<tr class="click" data-page-sheet="'+o.p+'"><td class="pg">'+esc(S.pages[o.p].nom)+'</td><td><div class="minibar"><i style="width:'+Math.round(o.x.b/mx*100)+'%;background:var(--s1)"></i><i style="width:'+Math.round(o.x.r/mx*100)+'%;background:var(--s2)"></i></div></td><td class="n">'+(o.x.nB?nf(o.x.b):'—')+'</td><td class="n">'+(o.x.nR?nf(o.x.r):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td><td class="c">'+evo(o.x.nB?o.x.b:null,o.z&&o.z.nB?o.z.b:null)+'</td></tr>'}).join('')||'<tr><td colspan="6" class="empty">Aucune donnée sur cette période.</td></tr>')+
+    (prows.map(function(o){return '<tr class="click" data-page-sheet="'+o.p+'"><td class="pg">'+esc(S.pages[o.p].nom)+'</td><td><div class="minibar"><i style="width:'+Math.round(o.x.b/mx*100)+'%;background:var(--s1)"></i><i style="width:'+Math.round(o.x.r/mx*100)+'%;background:var(--s2)"></i></div></td><td class="n">'+(o.x.nB?nf(o.x.b):'—')+'</td><td class="n">'+(o.x.nR?nfR(o.x):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td><td class="c">'+evo(o.x.nB?o.x.b:null,o.z&&o.z.nB?o.z.b:null)+'</td></tr>'}).join('')||'<tr><td colspan="6" class="empty">Aucune donnée sur cette période.</td></tr>')+
     '</tbody></table></div></div>';
   /* Trois panneaux */
   var withEv=prows.filter(function(o){return o.ev!=null});
@@ -806,7 +809,7 @@ function suiviEmployes(dm,R){
   var html=rows.map(function(o,i){
     var rouge=o.st==='retard'||o.st==='objectif';
     return '<tr'+(rouge?' class="rowko"':'')+'><td>'+(i+1)+'</td><td class="pg">'+(rouge?'<span class="koc" title="Alerte">● </span>':'')+esc(memberName(o.k))+'</td><td style="white-space:normal;max-width:240px" class="muted">'+(o.pids.map(function(p){return esc(S.pages[p].nom)}).join(', ')||'—')+'</td>'+
-      '<td class="n">'+(o.x.nB?nf(o.x.b):'—')+(o.ob?'<div class="muted" style="font-size:.7rem">objectif '+nf(o.ob.cible)+'</div>':'')+'</td><td class="n">'+(o.x.nR?nf(o.x.r):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td><td class="n'+(o.c.actifs<3*o.pids.length?' koc':'')+'">'+o.c.actifs+'</td>'+
+      '<td class="n">'+(o.x.nB?nf(o.x.b):'—')+(o.ob?'<div class="muted" style="font-size:.7rem">objectif '+nf(o.ob.cible)+'</div>':'')+'</td><td class="n">'+(o.x.nR?nfR(o.x):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td><td class="n'+(o.c.actifs<3*o.pids.length?' koc':'')+'">'+o.c.actifs+'</td>'+
       '<td class="num" style="font-size:.76rem">'+(o.last?stampS(o.last):'—')+'</td><td><span class="chip '+EST[o.st][1]+'">'+EST[o.st][0]+'</span></td><td><div class="row" style="gap:4px;flex-wrap:nowrap">'+eyeBtn('data-emp-sheet="'+o.k+'"')+'<button type="button" class="eye" data-emplink="'+esc(o.k)+'">'+ico('users','ic')+' Voir le lien</button><button type="button" class="eye" data-copy="'+esc(empLink(o.k))+'">Copier le lien</button></div></td></tr>';
   }).join('')||'<tr><td colspan="10" class="empty">Aucun employé pour ces filtres.</td></tr>';
   return '<div class="box">'+boxHead('users','Suivi des employés','('+dRange(R.a,b)+')','<div class="row"><label class="row" style="gap:6px"><span class="label">Statut</span>'+sel('eStat',[['','Tous'],['actif','Actif'],['verif','À vérifier'],['retard','En retard'],['objectif','Objectif non atteint']],S.eStat)+'</label>'+
@@ -827,7 +830,7 @@ function pageRows(dm,pids,R){
 function recapPages(dm){
   var R=typeRange(S.rpType,S.rpRef), pids=pageIds(S.rpPage==='all'||empPageIds().indexOf(S.rpPage)>=0?S.rpPage:'all').filter(function(p){return !S.f.emp||empKey(S.pages[p].responsable)===S.f.emp}), L=pageRows(dm,pids,R);
   var html=L.map(function(o,i){
-    return '<tr><td>'+(i+1)+'</td><td class="pg">'+esc(S.pages[o.p].nom)+'</td><td>'+esc(memberName(S.pages[o.p].responsable))+'</td><td class="n">'+(o.x.nB?nf(o.x.b):'—')+'</td><td class="n">'+(o.x.nR?nf(o.x.r):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td>'+
+    return '<tr><td>'+(i+1)+'</td><td class="pg">'+esc(S.pages[o.p].nom)+'</td><td>'+esc(memberName(S.pages[o.p].responsable))+'</td><td class="n">'+(o.x.nB?nf(o.x.b):'—')+'</td><td class="n">'+(o.x.nR?nfR(o.x):'—')+'</td><td class="n">'+sgSpan(diffOf(o.x))+'</td>'+
       '<td class="n">'+o.c.actifs+'</td><td class="n'+(o.c.pause?' koc':'')+'">'+o.c.pause+'</td><td class="c">'+evo(o.x.nB?o.x.b:null,o.z&&o.z.nB?o.z.b:null)+'</td><td>'+(o.nob&&!o.an?'<span class="chip no nodot">Aucun boost configuré</span>':!o.x.nB&&!o.x.nR?'<span class="chip no">Pas de données</span>':o.verif?'<span class="chip wa">À vérifier</span>':'<span class="chip ok">Normal</span>')+'</td><td>'+eyeBtn('data-page-sheet="'+o.p+'"')+'</td></tr>';
   }).join('')||'<tr><td colspan="11" class="empty">Aucune page.</td></tr>';
   return '<div class="box">'+boxHead('file','Récapitulatif détaillé par page Facebook','','<div class="row"><label class="fl"><span>Page Facebook</span>'+sel('rpPage',[['all',S.f.emp?'Toutes les pages de '+memberName(S.f.emp):'Toutes les pages']].concat(empPageIds().map(function(p){return [p,S.pages[p].nom]})),S.rpPage)+'</label>'+
@@ -972,7 +975,7 @@ function viewSaisie(){
     }).join('')+'</tr>';
   }).join('')||'<tr><td colspan="'+(cols.length+2)+'" class="empty">Aucun boost. Clique sur « Ajouter un boost ».</td></tr>';
   body+='<tr class="tr"><td class="bn">Total messages</td><td></td>'+cols.map(function(d){return '<td id="tot_'+d+'">'+totHtml(M.cols[d])+'</td>'}).join('')+'</tr>';
-  body+='<tr><td class="bn">Messages réels</td><td></td>'+cols.map(function(d){var col=M.cols[d];return '<td><input class="rin" type="number" min="0" step="1" inputmode="numeric" data-reel="'+pid+'|'+d+'" value="'+esc(col.rraw)+'"'+(col.lock?' readonly tabindex="-1" style="background:var(--soft)"':'')+' aria-label="Messages réels '+dLong(d)+'"></td>'}).join('')+'</tr>';
+  body+='<tr><td class="bn">Messages réels</td><td></td>'+cols.map(function(d){var col=M.cols[d];return '<td><input class="rin'+(col.ec!=null&&col.ec<0?' rbas':'')+'" id="r_'+d+'" type="number" min="0" step="1" inputmode="numeric" data-reel="'+pid+'|'+d+'" value="'+esc(col.rraw)+'"'+(col.lock?' readonly tabindex="-1" style="background:var(--soft)"':'')+' aria-label="Messages réels '+dLong(d)+'"></td>'}).join('')+'</tr>';
   body+='<tr class="tr"><td class="bn">Écart</td><td></td>'+cols.map(function(d){return '<td id="ec_'+d+'">'+ecHtml(M.cols[d])+'</td>'}).join('')+'</tr>';
   body+='<tr><td class="bn">Enregistrement</td><td></td>'+cols.map(function(d){
     var col=M.cols[d];
@@ -998,6 +1001,7 @@ function refreshGrid(pid){
     M.rows.forEach(function(b){var el=$('df_'+d+'_'+b.id);if(el)el.innerHTML=dfHtml(col.cells[b.id]);var inp=$('c_'+d+'_'+b.id);if(inp)inp.parentNode.classList.toggle('an',col.cells[b.id].kind==='an')});
     var x=$('tot_'+d);if(x)x.innerHTML=totHtml(col);
     x=$('ec_'+d);if(x)x.innerHTML=ecHtml(col);
+    x=$('r_'+d);if(x)x.classList.toggle('rbas',col.ec!=null&&col.ec<0);
     x=$('st_'+d);if(x)x.innerHTML=stateHtml(col);
   });
   var p=$('szPer');if(p)p.textContent=M.perN?nf(M.per):'—';
@@ -1157,14 +1161,14 @@ function viewEmpDash(pids,forAdmin){
     '<button type="button" class="small" data-page-sheet="'+pid+'">'+ico('hist','ic')+' Historique de la page</button><span style="margin-left:auto"></span>'+rangeNav('e',{a:w0,b:w1},w0>DEBUT,true)+'</div>';
   var big=function(icon,cls,title,sub,X,Yv,vcls){return '<div class="kpi">'+tile(icon,cls)+'<div><div class="t">'+title+'<small>'+sub+'</small></div><div class="row2"><span class="v '+vcls+'" style="font-size:2.4rem">'+(X!=null?nf(X):'—')+'</span><span class="cmp">'+(X!=null?evo(X,Yv):'')+'<br>vs hier ('+nf(Yv)+')</span></div><div class="s">'+dLong(t)+'</div></div></div>'};
   var cards='<div class="grid g2e">'+big('msg','b','Nombre de messages aujourd\'hui','(depuis les boosts)',D.nB?D.b:null,Y.nB?Y.b:null,'b')+big('msg','g','Messages réels aujourd\'hui','(saisis par l\'employé)',D.nR?D.r:null,Y.nR?Y.r:null,'g')+'</div>';
-  var hd='',rb='',rr='';for(var i=0;i<7;i++){var d=addDays(w0,i),x=W.days[d],td=d===t?' today':'';hd+='<th class="c'+td+'">'+JC[i]+' '+d.slice(8)+'</th>';rb+='<td class="n'+td+'">'+(x&&x.nB?nf(x.b):vide(d))+'</td>';rr+='<td class="n'+td+'">'+(x&&x.nR?nf(x.r):vide(d))+'</td>'}
+  var hd='',rb='',rr='';for(var i=0;i<7;i++){var d=addDays(w0,i),x=W.days[d],td=d===t?' today':'';hd+='<th class="c'+td+'">'+JC[i]+' '+d.slice(8)+'</th>';rb+='<td class="n'+td+'">'+(x&&x.nB?nf(x.b):vide(d))+'</td>';rr+='<td class="n'+td+'">'+(x&&x.nR?nfR(x):vide(d))+'</td>'}
   var rec='<div class="box">'+boxHead('cal','Récapitulatif des 7 jours')+'<div class="tb"><table class="rec"><thead><tr><th></th>'+hd+'<th class="c tot">TOTAL</th></tr></thead><tbody>'+
     '<tr><td><span class="rl">'+ico('send','ic')+'<span>Messages boost<small>(calcul automatique)</small></span></span></td>'+rb+'<td class="n tot">'+(W.nB?nf(W.b):'—')+'</td></tr>'+
-    '<tr><td><span class="rl">'+ico('msg','ic g')+'<span>Messages réels<small>(saisis par l\'employé)</small></span></span></td>'+rr+'<td class="n tot">'+(W.nR?nf(W.r):'—')+'</td></tr></tbody></table></div></div>';
+    '<tr><td><span class="rl">'+ico('msg','ic g')+'<span>Messages réels<small>(saisis par l\'employé)</small></span></span></td>'+rr+'<td class="n tot">'+(W.nR?nfR(W):'—')+'</td></tr></tbody></table></div></div>';
   var ec=diffOf(W);
   var ecart='<div class="box">'+boxHead('cal','Écart total sur 7 jours')+'<div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.4fr);gap:8px">'+
     '<div class="kpi">'+tile('send','l',1)+'<div><div class="t"><small>Total messages boost</small></div><span class="v b">'+(W.nB?nf(W.b):'—')+'</span></div></div>'+
-    '<div class="kpi">'+tile('msg','lg',1)+'<div><div class="t"><small>Total messages réels</small></div><span class="v g">'+(W.nR?nf(W.r):'—')+'</span></div></div>'+
+    '<div class="kpi">'+tile('msg','lg',1)+'<div><div class="t"><small>Total messages réels</small></div><span class="v g">'+(W.nR?nfR(W):'—')+'</span></div></div>'+
     '<div class="kpi">'+tile('scale','l',1)+'<div><div class="t"><small>Écart</small></div><span class="v '+(ec==null?'':ec<0?'r':'g')+'">'+(ec==null?'—':sg(ec))+'</span></div></div>'+
     (ec==null?'<div class="note">'+ico('info')+'<span>Écart calculé quand les compteurs et les messages réels sont saisis.</span></div>':ec>=0?'<div class="note g">'+ico('check')+'<span><b>Écart normal</b><br>Les messages réels sont supérieurs ou égaux aux messages boost.</span></div>':'<div class="note r">'+ico('warn')+'<span><b>À vérifier</b><br>Messages réels inférieurs aux messages boost. Vérifie tes compteurs et tes messages réels.</span></div>')+'</div></div>';
   var dlt=av!=null&&bv!=null?av-bv:null, pp=dlt!=null&&bv?pct(av,bv):null;
@@ -1206,7 +1210,7 @@ function histRow(p,d,dm,withPage,withEmp){
   var c=(dm[p]||{})[d], s=dayStatus(p,d,dm), when=c?(c.J?c.J.enregistreLe:c.horodatage):null;
   var who=c?(c.J?(c.J.auteurNom||memberName(c.J.auteur)):memberName(c.auteur)):memberName(respAt(p,d));
   return '<tr><td>'+jc(d)+' '+fmtD(d)+'</td>'+(withPage?'<td class="pg">'+esc(S.pages[p].nom)+'</td>':'')+(withEmp?'<td>'+esc(who)+'</td>':'')+
-    '<td class="n">'+(c&&c.totaux.messagesBoosts!=null?nf(c.totaux.messagesBoosts):'—')+'</td><td class="n">'+(c&&c.totaux.reels!=null?nf(c.totaux.reels):'—')+'</td><td class="n">'+sgSpan(c?c.totaux.ecart:null)+'</td>'+
+    '<td class="n">'+(c&&c.totaux.messagesBoosts!=null?nf(c.totaux.messagesBoosts):'—')+'</td><td class="n">'+(c&&c.totaux.reels!=null?(c.totaux.ecart!=null&&c.totaux.ecart<0?'<span class="koc">'+nf(c.totaux.reels)+'</span>':nf(c.totaux.reels)):'—')+'</td><td class="n">'+sgSpan(c?c.totaux.ecart:null)+'</td>'+
     '<td class="n">'+(c?c.totaux.actifs:'—')+'</td><td class="num" style="font-size:.76rem">'+(c?whenTxt(c):'—')+'</td><td>'+dsChip(s)+(c&&c.anomalies.length?' <span class="chip ko nodot">Anomalie</span>':'')+'</td>'+
     '<td>'+eyeBtn('data-day-detail="'+p+'|'+d+'"','Voir détails')+'</td></tr>';
 }
@@ -1378,7 +1382,7 @@ function viewRecap(){
   var cd=diffOf(cur);
   var cards='<div class="cards">'+
     card('Messages boosts',cur.nB?nf(cur.b):'—',pl)+
-    card('Messages réels',cur.nR?nf(cur.r):'—',pl)+
+    card('Messages réels',cur.nR?nfR(cur):'—',pl)+
     card('Différence',cd==null?'—':delta(cd,{plain:true}),'réels − boost')+
     card('Période précédente',nf(b),'<span class="muted">'+short(PP.a)+' – '+short(PP.b)+' · '+mLabel()+'</span>')+
     card('Évolution',a!=null&&b!=null?pctBadge(pct(a,b)):'—',a!=null&&b!=null?delta(a-b)+' <span class="muted">'+mLabel()+'</span>':'')+
@@ -1390,19 +1394,19 @@ function viewRecap(){
     ['b','r','nB','nR','nBR','bBR','rBR'].forEach(function(k){T[k]+=x[k]}); T.p+=vy||0;
     if(!x.nB&&!x.nR&&vy==null)return '';
     return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td>'+comptesHtml(comptesPage(pid,dm,P.b))+'</td>'+
-      '<td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nf(x.r):'—')+'</td><td>'+delta(diffOf(x))+'</td><td class="n muted">'+nf(vy)+'</td><td>'+(vx!=null&&vy!=null?delta(vx-vy,{pct:pct(vx,vy)}):'<span class="muted">—</span>')+'</td></tr>';
+      '<td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nfR(x):'—')+'</td><td>'+delta(diffOf(x))+'</td><td class="n muted">'+nf(vy)+'</td><td>'+(vx!=null&&vy!=null?delta(vx-vy,{pct:pct(vx,vy)}):'<span class="muted">—</span>')+'</td></tr>';
   }).join('');
   var vT=S.mesure==='r'?T.r:T.b;
-  prow=(prow||'<tr><td colspan="8" class="empty">Aucune donnée pour ces filtres.</td></tr>')+'<tr class="tot"><td><strong>TOTAL</strong></td><td></td><td></td><td class="n">'+(T.nB?nf(T.b):'—')+'</td><td class="n">'+(T.nR?nf(T.r):'—')+'</td><td>'+delta(T.nBR?T.bBR-T.rBR:null)+'</td><td class="n muted">'+nf(T.p)+'</td><td>'+delta(vT-T.p,{pct:pct(vT,T.p)})+'</td></tr>';
+  prow=(prow||'<tr><td colspan="8" class="empty">Aucune donnée pour ces filtres.</td></tr>')+'<tr class="tot"><td><strong>TOTAL</strong></td><td></td><td></td><td class="n">'+(T.nB?nf(T.b):'—')+'</td><td class="n">'+(T.nR?nfR(T):'—')+'</td><td>'+delta(T.nBR?T.bBR-T.rBR:null)+'</td><td class="n muted">'+nf(T.p)+'</td><td>'+delta(vT-T.p,{pct:pct(vT,T.p)})+'</td></tr>';
   /* Par employé */
   var emps={}; ids.forEach(function(pid){var u=S.pages[pid].responsable||'_none';(emps[u]=emps[u]||[]).push(pid)});
   var erow=Object.keys(emps).map(function(u){
     var x=rangeAgg(dm,P.a,P.b,emps[u],f), y=rangeAgg(dm,PP.a,PP.b,emps[u],f), vx=mv(x), vy=mv(y);
-    return '<tr><td><strong>'+(u==='_none'?'<span class="muted">Sans employé</span>':esc(memberName(u)))+'</strong></td><td class="n">'+emps[u].length+'</td><td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nf(x.r):'—')+'</td><td>'+delta(diffOf(x))+'</td><td>'+(vx!=null&&vy!=null?delta(vx-vy,{pct:pct(vx,vy)}):'<span class="muted">—</span>')+'</td></tr>';
+    return '<tr><td><strong>'+(u==='_none'?'<span class="muted">Sans employé</span>':esc(memberName(u)))+'</strong></td><td class="n">'+emps[u].length+'</td><td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nfR(x):'—')+'</td><td>'+delta(diffOf(x))+'</td><td>'+(vx!=null&&vy!=null?delta(vx-vy,{pct:pct(vx,vy)}):'<span class="muted">—</span>')+'</td></tr>';
   }).join('');
   /* Par jour */
   var drow='',prevV=null;
-  for(var d=P.a;d<=P.b;d=addDays(d,1)){var x=cur.days[d]||{b:0,r:0,nB:0,nR:0,nBR:0},v=mv(x);drow='<tr><td>'+dayName(d)+' '+short(d)+'</td><td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nf(x.r):'—')+'</td><td>'+delta(diffOf(x))+'</td><td>'+(v!=null&&prevV!=null?delta(v-prevV,{pct:pct(v,prevV)}):'<span class="muted">—</span>')+'</td></tr>'+drow;prevV=v}
+  for(var d=P.a;d<=P.b;d=addDays(d,1)){var x=cur.days[d]||{b:0,r:0,nB:0,nR:0,nBR:0},v=mv(x);drow='<tr><td>'+dayName(d)+' '+short(d)+'</td><td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nfR(x):'—')+'</td><td>'+delta(diffOf(x))+'</td><td>'+(v!=null&&prevV!=null?delta(v-prevV,{pct:pct(v,prevV)}):'<span class="muted">—</span>')+'</td></tr>'+drow;prevV=v}
   var note=f.boost||f.statut?'<div class="muted" style="font-size:.82rem">Le filtre compte Boost / statut s\'applique aux messages boosts. Les messages réels sont comptés par page.</div>':'';
   return '<div style="display:grid;gap:18px">'+periodBar('r')+'<section class="panel"><div class="ph"><h2>Récapitulatif · '+esc(pl)+'</h2><span class="label">'+short(P.a)+' – '+short(P.b)+'</span></div>'+filters+note+'</section>'+cards+
     compPanel(dm,ids,P,f)+
