@@ -260,7 +260,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=20"></script><script src="supabase.js?v=20"></script><script src="web.js?v=20"></script>
+<script src="config.js?v=21"></script><script src="supabase.js?v=21"></script><script src="web.js?v=21"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -384,7 +384,7 @@ function totaux(boosts,reels,base){
   var c=comptes(boosts), mb=0;
   (boosts||[]).forEach(function(b){if(!stInfo(b.statut).hors)mb+=nouveaux(b,base)});
   var r=reels==null||reels===''?null:+reels;
-  return {actifs:c.actifs,pause:c.pause,supprimes:c.supprimes,renseignes:c.renseignes,total:c.renseignes,messagesBoosts:mb,reels:r,ecart:r==null?null:mb-r};
+  return {actifs:c.actifs,pause:c.pause,supprimes:c.supprimes,renseignes:c.renseignes,total:c.renseignes,messagesBoosts:mb,reels:r,ecart:r==null?null:r-mb};
 }
 /* Statut d'un boost à une date : historique des statuts (boosts/{page}), sinon dernier état connu */
 function bdef(pid,bid){var L=(S.bdefs[pid]||{}).liste||[];for(var i=0;i<L.length;i++)if(L[i].id===bid)return L[i];return null}
@@ -443,7 +443,7 @@ function dayMap(){
       var r=wR?wR.totaux.reels:null;
       out[d]={pageId:pid,date:d,jour:last.jour,heure:J?J.heure:last.heure,horodatage:J?J.horodatage:last.horodatage,auteur:(J||wR||last).auteur,boosts:boosts,boostsDuJour:!!wC,entries:es,reelEntry:wR,
         J:J?J.doc:null,jourId:J?J.jourId:null,import:!J&&last.auteur==='import',nv:nv,ref:ref,anomalies:an,counters:wC?wC.boosts:[],
-        totaux:{actifs:c.actifs,pause:c.pause,supprimes:c.supprimes,renseignes:c.renseignes,total:c.renseignes,messagesBoosts:mb,reels:r,ecart:mb!=null&&r!=null?mb-r:null}};
+        totaux:{actifs:c.actifs,pause:c.pause,supprimes:c.supprimes,renseignes:c.renseignes,total:c.renseignes,messagesBoosts:mb,reels:r,ecart:mb!=null&&r!=null?r-mb:null}};
       if(J){J.totaux.messagesBoosts=mb}
     });
   });
@@ -524,7 +524,8 @@ function rangeAgg(dm,a,b,pids,f){
   });
   return r;
 }
-function diffOf(x){return x&&x.nBR?x.bBR-x.rBR:null}
+/* Écart = réels − boost : positif ou zéro = normal ; négatif (réels inférieurs au boost) = anomalie */
+function diffOf(x){return x&&x.nBR?x.rBR-x.bBR:null}
 function mv(x){if(!x)return null;var n=S.mesure==='r'?x.nR:x.nB;return n?x[S.mesure]:null}
 function mLabel(){return S.mesure==='r'?'messages réels':'messages boosts'}
 /* ---------- Personnes ---------- */
@@ -671,11 +672,11 @@ function series(dm,ids,a,b){
   return {lab:lab,b:bs,r:rs,e:es};
 }
 function chartBlock(sr,mode,W,H){
-  if(mode==='ecart')return lineChart(sr.lab,[{n:'Écart journalier (boost − réels)',c:'var(--s3)',v:sr.e,sign:true}],{W:W,H:H});
+  if(mode==='ecart')return lineChart(sr.lab,[{n:'Écart journalier (réels − boost)',c:'var(--s3)',v:sr.e,sign:true}],{W:W,H:H});
   return lineChart(sr.lab,[{n:'Messages boost (calcul automatique)',c:'var(--s1)',v:sr.b},{n:'Messages réels (saisis par les employés)',c:'var(--s2)',v:sr.r}],{W:W,H:H});
 }
-/* Écart = boost − réels : positif (réels inférieurs au boost) = rouge ; zéro ou négatif = vert */
-function sgSpan(n){return n==null?'<span class="muted">—</span>':'<span class="sg '+(n>0?'down':'up')+'">'+sg(n)+'</span>'}
+/* Écart = réels − boost : négatif (réels inférieurs au boost) = rouge ; zéro ou positif = vert */
+function sgSpan(n){return n==null?'<span class="muted">—</span>':'<span class="sg '+(n<0?'down':'up')+'">'+sg(n)+'</span>'}
 function seuil(){var s=+(S.cfg.seuil);return s>0?s:10}
 
 /* ---------- Tableau de bord administrateur ---------- */
@@ -709,7 +710,7 @@ function viewDash(){
   var kp='<div class="kpis">'+
     kpi('msg','b','Total messages aujourd\'hui','('+scope+' - Boost)',D.nB?nf(D.b):'—','',(D.nB?evo(D.b,Y.nB?Y.b:null):'')+'<br>vs hier ('+(Y.nB?nf(Y.b):'—')+')')+
     kpi('msg','g','Total messages réels aujourd\'hui','('+scope+')',D.nR?nf(D.r):'—','',(D.nR?evo(D.r,Y.nR?Y.r:null):'')+'<br>vs hier ('+(Y.nR?nf(Y.r):'—')+')')+
-    kpi('scale','o','Écart aujourd\'hui','(Boost − Réels)',de==null?'—':sg(de),'o','',de==null?'Réels ou compteurs manquants':'')+
+    kpi('scale','o','Écart aujourd\'hui','(Réels − Boost)',de==null?'—':sg(de),de==null?'o':de<0?'r':'g','',de==null?'Réels ou compteurs manquants':'')+
     kpi('layers','l','Total boosts actifs','('+scope+')',String(C.actifs),'g','','sur '+C.renseignes+' boosts')+
     kpi('pause','r','Total boosts en pause','('+scope+')',String(C.pause),'r','','sur '+C.renseignes+' boosts')+'</div>';
   /* Récapitulatif des 7 jours (semaine affichée) */
@@ -872,7 +873,7 @@ function gridModel(pid){
     col.tot=any?tot:null;
     var rv=ed&&'r' in ed?numOrNull(ed.r):rec?c.totaux.reels:br?numOrNull(br.reels):null;
     col.r=rv; col.rraw=ed&&'r' in ed?ed.r:(rv==null?'':String(rv));
-    col.ec=col.tot!=null&&rv!=null?col.tot-rv:null;
+    col.ec=col.tot!=null&&rv!=null?rv-col.tot:null;
     if(col.tot!=null){M.per+=col.tot;M.perN++}
     if(rv!=null){M.perR+=rv;M.perRN++}
     M.cols[d]=col;
@@ -888,7 +889,7 @@ function dfHtml(cell){
   return '<span class="df mu">—</span>';
 }
 function totHtml(col){return col.tot==null?'<span class="muted">—</span>':'<span class="okc">+'+nf(col.tot)+'</span>'}
-function ecHtml(col){return col.ec==null?'<span class="muted">—</span>':'<span class="'+(col.ec>0?'koc':'okc')+'">'+sg(col.ec)+'</span>'}
+function ecHtml(col){return col.ec==null?'<span class="muted">—</span>':'<span class="'+(col.ec<0?'koc':'okc')+'">'+sg(col.ec)+'</span>'}
 function stateHtml(col){
   var s=S.saveState[col.key];
   if(s&&s.st==='saving')return '<span class="when">Sauvegarde en cours…</span>';
@@ -1015,7 +1016,7 @@ function commitDay(pid,d){
   S.modal=null; S.msgs.sz={t:'Enregistrement en cours…',c:''}; render();
   ref.get().then(function(s){
     if(s.exists)throw {code:'deja'};
-    var doc={pageId:pid,date:d,auteur:S.me,auteurNom:myName(),responsable:S.pages[pid].responsable||null,boosts:cleanBoosts(col.boosts),reels:col.r,totalBoost:col.tot,ecart:col.ec,
+    var doc={pageId:pid,date:d,auteur:S.me,auteurNom:myName(),responsable:S.pages[pid].responsable||null,boosts:cleanBoosts(col.boosts),reels:col.r,totalBoost:col.tot,ecart:col.ec==null?null:-col.ec,
       statut:'enregistre',enregistreLe:now,brouillonCreeLe:br?br.creeLe:null,brouillonMajLe:br?br.majLe:null,anomalies:col.an,rectifs:[]};
     return ref.set(doc).then(function(){
       S.jours[key]=doc; delete S.ed[key]; delete S.saveState[key]; bump();
@@ -1041,8 +1042,8 @@ function doRect(pid,d,motif){
   var avant={boosts:cleanBoosts(c.counters.map(function(b){return {id:b.id,nom:b.nom,statut:b.statut,messages:b.messages==null?null:+b.messages}})),reels:c.totaux.reels,totalBoost:c.totaux.messagesBoosts};
   var apres={boosts:cleanBoosts(col.boosts),reels:col.r,totalBoost:col.tot};
   var r={par:S.me,parNom:'Administrateur',le:now,motif:motif,avant:avant,apres:apres};
-  var doc=J?Object.assign({},J,{boosts:apres.boosts,reels:col.r,totalBoost:col.tot,ecart:col.ec,statut:'rectifie',rectifs:(J.rectifs||[]).concat([r])}):
-    {pageId:pid,date:d,auteur:c.auteur,auteurNom:memberName(c.auteur),responsable:S.pages[pid].responsable||null,boosts:apres.boosts,reels:col.r,totalBoost:col.tot,ecart:col.ec,statut:'rectifie',enregistreLe:c.import?null:c.horodatage,importeLe:c.import?(S.histImp||{})[pid]||null:null,dateReleve:d,source:c.import?'import':'saisie',anomalies:[],rectifs:[r]};
+  var doc=J?Object.assign({},J,{boosts:apres.boosts,reels:col.r,totalBoost:col.tot,ecart:col.ec==null?null:-col.ec,statut:'rectifie',rectifs:(J.rectifs||[]).concat([r])}):
+    {pageId:pid,date:d,auteur:c.auteur,auteurNom:memberName(c.auteur),responsable:S.pages[pid].responsable||null,boosts:apres.boosts,reels:col.r,totalBoost:col.tot,ecart:col.ec==null?null:-col.ec,statut:'rectifie',enregistreLe:c.import?null:c.horodatage,importeLe:c.import?(S.histImp||{})[pid]||null:null,dateReleve:d,source:c.import?'import':'saisie',anomalies:[],rectifs:[r]};
   S.modal=null; render();
   S.db.doc('jours/'+key).set(doc).then(function(){
     S.jours[key]=doc; delete S.ed[key]; bump();
@@ -1089,7 +1090,7 @@ function anomaliesOf(dm,pids,a,b){
       c.anomalies.forEach(function(x){out.push({p:p,d:k,type:'baisse',boost:x.nom,desc:'Compteur inférieur au compteur précédent ('+fmtD(x.prevDate)+')',av:x.prev,ap:x.cur})});
       var e=c.totaux.ecart,mb=c.totaux.messagesBoosts;
       /* Réels > boost est normal (l'employé peut lancer lui-même des conversations) ; réels < boost = anomalie */
-      if(e!=null&&e>0)out.push({p:p,d:k,type:'ecart',boost:'Tous les boosts',desc:'Messages réels inférieurs au total des messages boost',av:mb,ap:c.totaux.reels});
+      if(e!=null&&e<0)out.push({p:p,d:k,type:'ecart',boost:'Tous les boosts',desc:'Messages réels inférieurs au total des messages boost',av:mb,ap:c.totaux.reels});
     });
     for(var k=a<SAISIE_DEBUT?SAISIE_DEBUT:a;k<=b&&k<t;k=addDays(k,1)){if(dayStatus(p,k,dm)==='non'&&respAt(p,k))out.push({p:p,d:k,type:'manquant',boost:'—',desc:'Jour non enregistré',av:null,ap:null})}
   });
@@ -1122,12 +1123,12 @@ function viewEmpDash(pids,forAdmin){
   var rec='<div class="box">'+boxHead('cal','Récapitulatif des 7 jours')+'<div class="tb"><table class="rec"><thead><tr><th></th>'+hd+'<th class="c tot">TOTAL</th></tr></thead><tbody>'+
     '<tr><td><span class="rl">'+ico('send','ic')+'<span>Messages boost<small>(calcul automatique)</small></span></span></td>'+rb+'<td class="n tot">'+(W.nB?nf(W.b):'—')+'</td></tr>'+
     '<tr><td><span class="rl">'+ico('msg','ic g')+'<span>Messages réels<small>(saisis par l\'employé)</small></span></span></td>'+rr+'<td class="n tot">'+(W.nR?nf(W.r):'—')+'</td></tr></tbody></table></div></div>';
-  var ec=diffOf(W), faible=ec!=null&&Math.abs(ec)<=Math.max(2,(W.bBR||0)*0.1);
+  var ec=diffOf(W);
   var ecart='<div class="box">'+boxHead('cal','Écart total sur 7 jours')+'<div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.4fr);gap:8px">'+
     '<div class="kpi">'+tile('send','l',1)+'<div><div class="t"><small>Total messages boost</small></div><span class="v b">'+(W.nB?nf(W.b):'—')+'</span></div></div>'+
     '<div class="kpi">'+tile('msg','lg',1)+'<div><div class="t"><small>Total messages réels</small></div><span class="v g">'+(W.nR?nf(W.r):'—')+'</span></div></div>'+
-    '<div class="kpi">'+tile('scale','l',1)+'<div><div class="t"><small>Écart</small></div><span class="v '+(ec==null?'':ec===0?'g':'r')+'">'+(ec==null?'—':sg(ec))+'</span></div></div>'+
-    (ec==null?'<div class="note">'+ico('info')+'<span>Écart calculé quand les compteurs et les messages réels sont saisis.</span></div>':faible?'<div class="note o">'+ico('info')+'<span><b>Écart faible</b><br>Aucun problème. À surveiller selon les règles définies.</span></div>':'<div class="note r">'+ico('warn')+'<span><b>Écart important</b><br>Vérifie tes compteurs et tes messages réels.</span></div>')+'</div></div>';
+    '<div class="kpi">'+tile('scale','l',1)+'<div><div class="t"><small>Écart</small></div><span class="v '+(ec==null?'':ec<0?'r':'g')+'">'+(ec==null?'—':sg(ec))+'</span></div></div>'+
+    (ec==null?'<div class="note">'+ico('info')+'<span>Écart calculé quand les compteurs et les messages réels sont saisis.</span></div>':ec>=0?'<div class="note g">'+ico('check')+'<span><b>Écart normal</b><br>Les messages réels sont supérieurs ou égaux aux messages boost.</span></div>':'<div class="note r">'+ico('warn')+'<span><b>À vérifier</b><br>Messages réels inférieurs aux messages boost. Vérifie tes compteurs et tes messages réels.</span></div>')+'</div></div>';
   var dlt=av!=null&&bv!=null?av-bv:null, pp=dlt!=null&&bv?pct(av,bv):null;
   var evoBox='<div class="grid" style="grid-template-columns:minmax(0,.8fr) minmax(0,2fr);gap:14px">'+
     '<div class="box"><div class="row">'+tile('layers','l',1)+'<b style="color:var(--title)">Boosts actifs</b></div><span class="v" style="font-size:2.4rem;font-weight:800;color:var(--title)">'+C.actifs+'</span><span class="muted" style="font-size:.74rem">Calcul automatique depuis les boosts actuellement actifs (sur '+C.renseignes+').</span></div>'+
@@ -1177,7 +1178,7 @@ function histStats(dm,pairs){
   return {n:n,miss:miss,b:nb?b:null,r:nr?r:null,an:an,rc:rc};
 }
 function statsHtml(st){
-  return '<div class="stats"><div class="stat"><span class="l">Total boost</span><span class="v">'+nf(st.b)+'</span></div><div class="stat"><span class="l">Total réels</span><span class="v">'+nf(st.r)+'</span></div><div class="stat"><span class="l">Écart</span><span class="v">'+(st.b!=null&&st.r!=null?sg(st.b-st.r):'—')+'</span></div>'+
+  return '<div class="stats"><div class="stat"><span class="l">Total boost</span><span class="v">'+nf(st.b)+'</span></div><div class="stat"><span class="l">Total réels</span><span class="v">'+nf(st.r)+'</span></div><div class="stat"><span class="l">Écart</span><span class="v">'+(st.b!=null&&st.r!=null?sg(st.r-st.b):'—')+'</span></div>'+
     '<div class="stat"><span class="l">Jours enregistrés</span><span class="v g">'+st.n+'</span></div><div class="stat"><span class="l">Jours non effectués</span><span class="v r">'+st.miss+'</span></div><div class="stat"><span class="l">Anomalies</span><span class="v o">'+st.an+'</span></div><div class="stat"><span class="l">Rectifications</span><span class="v">'+st.rc+'</span></div></div>';
 }
 /* Historique d'une page */
@@ -1378,7 +1379,7 @@ function recapHistory(dm){
   var rows=list.slice(0,N).map(function(p,i){
     var o=list[i+1], a=p.a;
     if(!a)return '<tr><td>'+esc(plabel(p.k,g,p.ref))+'</td><td colspan="7" class="muted">Aucune saisie</td></tr>';
-    return '<tr><td><strong>'+esc(plabel(p.k,g,p.ref))+'</strong></td><td class="n">'+nf(a.boosts)+'</td><td class="n">'+nf(a.reels)+'</td><td>'+delta(a.ecart)+'</td>'+
+    return '<tr><td><strong>'+esc(plabel(p.k,g,p.ref))+'</strong></td><td class="n">'+nf(a.boosts)+'</td><td class="n">'+nf(a.reels)+'</td><td>'+delta(a.reels-a.boosts)+'</td>'+
       '<td class="n">'+nf(a.nbBoosts)+'</td><td class="n">'+(a.moyActifs==null?'—':a.moyActifs.toFixed(1).replace('.',','))+'</td>'+
       '<td>'+delta(o&&o.a?a.boosts-o.a.boosts:null,{pct:o&&o.a?pct(a.boosts,o.a.boosts):null})+'</td><td>'+delta(o&&o.a?a.reels-o.a.reels:null,{pct:o&&o.a?pct(a.reels,o.a.reels):null})+'</td></tr>';
   }).join('');
@@ -1423,7 +1424,7 @@ function viewValid(){
     var rows=pageIds().map(function(pid){
       var a=aggregate(dm,w.k,'semaine',pid), pa=aggregate(dm,prevK,'semaine',pid), st=weekStatus(pid,w.k), v=S.valid[w.k+'_'+pid];
       if(!a)return '';
-      return '<tr><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td class="n">'+a.n+' j</td><td class="n">'+nf(a.boosts)+'</td><td class="n">'+nf(a.reels)+'</td><td>'+delta(a.ecart)+'</td>'+
+      return '<tr><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td class="n">'+a.n+' j</td><td class="n">'+nf(a.boosts)+'</td><td class="n">'+nf(a.reels)+'</td><td>'+delta(a.reels-a.boosts)+'</td>'+
         '<td class="n">'+nf(a.nbBoosts)+'</td><td>'+delta(pa?a.reels-pa.reels:null,{pct:pa?pct(a.reels,pa.reels):null})+'</td><td>'+statusChip(st,true)+(v&&st==='valide'?'<div class="muted" style="font-size:.75rem">'+esc(v.leTexte||'')+'</div>':'')+'</td>'+
         '<td>'+(st==='valide'?'<button class="small" type="button" data-unvalid="'+w.k+'_'+pid+'">Annuler</button>':'<button class="small primary" type="button" data-valid="'+w.k+'_'+pid+'">Valider</button>')+'</td></tr>';
     }).join('');
