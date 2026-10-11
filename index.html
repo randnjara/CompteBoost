@@ -260,7 +260,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=28"></script><script src="supabase.js?v=28"></script><script src="web.js?v=28"></script>
+<script src="config.js?v=29"></script><script src="supabase.js?v=29"></script><script src="web.js?v=29"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -587,15 +587,18 @@ function dayStatus(pid,date,dm){
   if(brouOf(pid,date))return 'brouillon';
   if(date<SAISIE_DEBUT)return 'avant';
   if(date<today())return 'non';
+  if(date===today())return 'auj';
   return 'attente';
 }
-var DSTAT={importe:['Importé depuis Excel','bl'],avant:['Pas de relevé Excel','no'],enregistre:['Enregistré','ok'],rectifie:['Rectifié','wa'],brouillon:['Brouillon','bl'],non:['Non effectué','ko'],attente:['En attente','no']};
+var DSTAT={importe:['Importé depuis Excel','bl'],avant:['Pas de relevé Excel','no'],enregistre:['Enregistré','ok'],rectifie:['Rectifié','wa'],brouillon:['Brouillon','bl'],non:['Non effectué','ko'],auj:['Pas encore fait aujourd\'hui','ko'],attente:['En attente','no']};
 /* Heure d'enregistrement affichée : jamais d'heure inventée pour les relevés importés d'Excel */
 function isImp(c){return !!(c&&(c.import||c.J&&c.J.source==='import'))}
 /* Date d'import Excel du jour (plusieurs imports possibles pour une page) */
 function impDate(pid,date){var H=S.histImp||{}, x=date&&(pid+'|'+date) in H?H[pid+'|'+date]:H[pid];return x?fmtD(ymdOf(x)):'—'}
 function whenTxt(c){if(!c)return '—';if(isImp(c))return 'Importé d\'Excel le '+impDate(c.pageId,c.date);return stamp(c.J?c.J.enregistreLe:c.horodatage)}
 function isDone(s){return s==='enregistre'||s==='rectifie'||s==='importe'}
+/* Case vide d'un jour à remplir (aujourd'hui compris) : en rouge */
+function vide(d){return d<=today()&&d>=SAISIE_DEBUT?'<span class="koc" title="Non effectué">—</span>':'—'}
 function dsChip(s){var x=DSTAT[s]||['—','no'];return '<span class="chip '+x[1]+'">'+x[0]+'</span>'}
 
 /* ---------- Icônes ---------- */
@@ -743,7 +746,7 @@ function viewDash(){
   var w0=f.type==='semaine'?R.a:monday(R.b>t?t:R.b), W=rangeAgg(dm,w0,addDays(w0,6),ids);
   var head='<th>Jour</th>',rb='',rr='',re='';
   for(var i=0;i<7;i++){var d=addDays(w0,i),x=W.days[d],td=d===t?' today':'';head+='<th class="c'+td+'">'+JC[i]+' '+d.slice(8)+'</th>';
-    rb+='<td class="n'+td+'">'+(x&&x.nB?nf(x.b):'—')+'</td>';rr+='<td class="n'+td+'">'+(x&&x.nR?nf(x.r):'—')+'</td>';re+='<td class="n'+td+'">'+sgSpan(x?diffOf(x):null)+'</td>'}
+    rb+='<td class="n'+td+'">'+(x&&x.nB?nf(x.b):vide(d))+'</td>';rr+='<td class="n'+td+'">'+(x&&x.nR?nf(x.r):vide(d))+'</td>';re+='<td class="n'+td+'">'+sgSpan(x?diffOf(x):null)+'</td>'}
   var rec='<div class="box">'+boxHead('cal','Récapitulatif des 7 jours','('+scope.toLowerCase()+')','<span class="label">'+dRange(w0,addDays(w0,6))+'</span>')+
     '<div class="tb"><table class="rec"><thead><tr>'+head+'<th class="c tot">TOTAL</th></tr></thead><tbody>'+
     '<tr><td><span class="rl">'+ico('send','ic')+'Messages boost</span></td>'+rb+'<td class="n tot">'+(W.nB?nf(W.b):'—')+'</td></tr>'+
@@ -930,7 +933,7 @@ function stateHtml(col){
   if(!col.rec&&col.date<SAISIE_DEBUT)return '<span class="when">Pas de relevé Excel</span>';
   if(!col.rec&&col.date<addDays(today(),-RATTRAPAGE))return '<span class="when koc">Non effectué<br>délai de 2 jours dépassé</span>';
   if(!col.rec&&col.date<today())return '<span class="when koc">Non effectué'+(S.owner?'':'<br>à rattraper')+'</span>';
-  if(S.owner&&!col.rec)return '<span class="when">En attente de l\'employé</span>';
+  if(!col.rec&&col.date===today())return '<span class="when koc">Pas encore fait<br>aujourd\'hui</span>';
   return '<span class="when">Heure : —</span>';
 }
 function savedHtml(col){
@@ -1154,7 +1157,7 @@ function viewEmpDash(pids,forAdmin){
     '<button type="button" class="small" data-page-sheet="'+pid+'">'+ico('hist','ic')+' Historique de la page</button><span style="margin-left:auto"></span>'+rangeNav('e',{a:w0,b:w1},w0>DEBUT,true)+'</div>';
   var big=function(icon,cls,title,sub,X,Yv,vcls){return '<div class="kpi">'+tile(icon,cls)+'<div><div class="t">'+title+'<small>'+sub+'</small></div><div class="row2"><span class="v '+vcls+'" style="font-size:2.4rem">'+(X!=null?nf(X):'—')+'</span><span class="cmp">'+(X!=null?evo(X,Yv):'')+'<br>vs hier ('+nf(Yv)+')</span></div><div class="s">'+dLong(t)+'</div></div></div>'};
   var cards='<div class="grid g2e">'+big('msg','b','Nombre de messages aujourd\'hui','(depuis les boosts)',D.nB?D.b:null,Y.nB?Y.b:null,'b')+big('msg','g','Messages réels aujourd\'hui','(saisis par l\'employé)',D.nR?D.r:null,Y.nR?Y.r:null,'g')+'</div>';
-  var hd='',rb='',rr='';for(var i=0;i<7;i++){var d=addDays(w0,i),x=W.days[d],td=d===t?' today':'';hd+='<th class="c'+td+'">'+JC[i]+' '+d.slice(8)+'</th>';rb+='<td class="n'+td+'">'+(x&&x.nB?nf(x.b):'—')+'</td>';rr+='<td class="n'+td+'">'+(x&&x.nR?nf(x.r):'—')+'</td>'}
+  var hd='',rb='',rr='';for(var i=0;i<7;i++){var d=addDays(w0,i),x=W.days[d],td=d===t?' today':'';hd+='<th class="c'+td+'">'+JC[i]+' '+d.slice(8)+'</th>';rb+='<td class="n'+td+'">'+(x&&x.nB?nf(x.b):vide(d))+'</td>';rr+='<td class="n'+td+'">'+(x&&x.nR?nf(x.r):vide(d))+'</td>'}
   var rec='<div class="box">'+boxHead('cal','Récapitulatif des 7 jours')+'<div class="tb"><table class="rec"><thead><tr><th></th>'+hd+'<th class="c tot">TOTAL</th></tr></thead><tbody>'+
     '<tr><td><span class="rl">'+ico('send','ic')+'<span>Messages boost<small>(calcul automatique)</small></span></span></td>'+rb+'<td class="n tot">'+(W.nB?nf(W.b):'—')+'</td></tr>'+
     '<tr><td><span class="rl">'+ico('msg','ic g')+'<span>Messages réels<small>(saisis par l\'employé)</small></span></span></td>'+rr+'<td class="n tot">'+(W.nR?nf(W.r):'—')+'</td></tr></tbody></table></div></div>';
