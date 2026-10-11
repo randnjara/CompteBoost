@@ -260,7 +260,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=21"></script><script src="supabase.js?v=21"></script><script src="web.js?v=21"></script>
+<script src="config.js?v=22"></script><script src="supabase.js?v=22"></script><script src="web.js?v=22"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -402,7 +402,12 @@ function boostList(pid,date,base){
   ((S.bdefs[pid]||{}).liste||[]).forEach(function(d){if(seen[d.id])return;if(d.creeLe&&d.creeLe>date)return;seen[d.id]=1;out.push({id:d.id,nom:d.nom,statut:statutAt(pid,d.id,date,'actif'),messages:null})});
   var p=S.pages[pid];
   if(p&&p.boostsEtat&&p.boostsMaj&&ymdOf(p.boostsMaj)<=date)p.boostsEtat.forEach(function(b){if(seen[b.id])return;seen[b.id]=1;out.push({id:b.id,nom:b.nom,statut:statutAt(pid,b.id,date,b.statut),messages:null})});
-  return out.sort(function(a,b){return String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true})});
+  /* Boosts d'origine par nom ; boosts ajoutés ensuite toujours en bas, dans l'ordre de leur ajout */
+  var L=(S.bdefs[pid]||{}).liste||[], pos={};L.forEach(function(d,i){if(d.creeLe)pos[d.id]={c:d.creeLe,i:i}});
+  return out.sort(function(a,b){var x=pos[a.id],y=pos[b.id];
+    if(x&&y)return x.c<y.c?-1:x.c>y.c?1:x.i-y.i;
+    if(x||y)return x?1:-1;
+    return String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true})});
 }
 /* Valeur du jour d'une page. Un jour enregistré dans la grille fait foi ; sinon dernière saisie.
    Nouveaux messages = compteur cumulé du jour − dernier compteur valide précédent ; 1er compteur = référence ;
@@ -928,7 +933,9 @@ function viewSaisie(){
     if(hors&&!cols.some(function(d){return M.cols[d].cells[b.id].v!=null})&&!isAdminMode())return '';
     var act=s==='termine'?'<span class="muted">Terminé</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Relancer</button>':hors?'<span class="muted">Supprimé</span>':s==='pause'?'<span class="koc">En pause</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Reprendre</button>':'<span class="okc">Actif</span><button type="button" class="bpause" data-bst="'+pid+'|'+b.id+'|pause">'+ico('pause','ic" style="width:12px;height:12px')+' Pause</button>';
     if(!hors)act+='<button type="button" class="link" data-bst="'+pid+'|'+b.id+'|termine" style="font-size:.66rem">Terminer</button>';
-    if(isAdminMode()&&!hors)act+='<button type="button" class="link" data-bst="'+pid+'|'+b.id+'|supprime" style="font-size:.66rem">Supprimer</button>';
+    /* L'employé peut retirer un boost ajouté aujourd'hui par erreur, tant qu'aucun chiffre n'y est saisi */
+    var bd=bdef(pid,b.id), neuf=!S.owner&&bd&&bd.creeLe===t&&!cols.some(function(d){return M.cols[d].cells[b.id].v!=null});
+    if((isAdminMode()||neuf)&&!hors)act+='<button type="button" class="link" data-bst="'+pid+'|'+b.id+'|supprime" style="font-size:.66rem">Supprimer</button>';
     return '<tr><td class="bn">'+esc(b.nom)+'</td><td><div class="st">'+act+'</div></td>'+cols.map(function(d){
       var col=M.cols[d], c=col.cells[b.id], id='c_'+d+'_'+b.id;
       if(!c.editable&&c.v==null)return '<td><div class="cell'+(col.lock?' lock':'')+'"><span style="padding:6px 0" class="muted">—</span><span class="df mu">—</span></div></td>';
@@ -1075,7 +1082,8 @@ function addBoost(pid){
   if(roGuard())return;
   var doc=defsFor(pid), dm=dayMap(), st=latestState(pid,dm,today()), names={}, n=1;
   (st?st.boosts:[]).concat(doc.liste).forEach(function(b){names[b.nom]=1});
-  while(names['Boost '+n])n++;
+  /* Numéro suivant le plus grand déjà utilisé, pour que le nouveau boost arrive en bas */
+  Object.keys(names).forEach(function(k){var m=/^Boost (\d+)$/.exec(k);if(m&&+m[1]>=n)n=+m[1]+1});
   doc.liste.push({id:'b'+uid(),nom:'Boost '+n,creeLe:today(),hist:[{statut:'actif',date:today(),le:nowD().toISOString(),par:S.me,parNom:myName()}]});
   writeDefs(pid,doc,'✓ Boost '+n+' ajouté. Son premier compteur servira de référence.');
 }
