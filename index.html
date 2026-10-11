@@ -260,7 +260,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=24"></script><script src="supabase.js?v=24"></script><script src="web.js?v=24"></script>
+<script src="config.js?v=25"></script><script src="supabase.js?v=25"></script><script src="web.js?v=25"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -775,6 +775,8 @@ function viewDash(){
   return '<div class="grid">'+filterBar()+kp+'<div class="grid g2">'+rec+cmp+'</div><div class="grid g2">'+chart+rep+'</div>'+three+suiviEmployes(dm,R)+recapPages(dm)+'</div>';
 }
 /* Suivi des employés : chiffres de la période, dernière saisie, retard */
+/* Réels inférieurs au boost (écart négatif) sur la période, ou un jour de la période : à vérifier */
+function ecartNeg(dm,pids,a,b,x){if(x&&diffOf(x)!=null&&diffOf(x)<0)return true;return pids.some(function(p){return Object.keys(dm[p]||{}).some(function(d){var e=dm[p][d].totaux.ecart;return d>=a&&d<=b&&e!=null&&e<0})})}
 function empRow(dm,k,a,b){
   var pids=pagesOf(k), x=rangeAgg(dm,a,b,pids), c=actifsOf(dm,pids,today()), last=null, miss=0, an=0, t=today();
   pids.forEach(function(p){
@@ -783,7 +785,7 @@ function empRow(dm,k,a,b){
     [addDays(t,-1),addDays(t,-2)].forEach(function(d){if(d>=start&&d>=SAISIE_DEBUT&&dayStatus(p,d,dm)==='non')miss++});
   });
   var ob=objCible(k,a,b), sous=!!(ob&&pids.length&&(x.nB?x.b:0)<ob.cible);
-  var st=!pids.length?'none':miss>=2?'retard':sous?'objectif':(miss||an)?'verif':'actif';
+  var st=!pids.length?'none':miss>=2?'retard':sous?'objectif':(miss||an||ecartNeg(dm,pids,a,b,x))?'verif':'actif';
   return {k:k,pids:pids,x:x,c:c,last:last,miss:miss,an:an,st:st,ob:ob,sous:sous};
 }
 var EST={actif:['Actif','ok'],objectif:['Objectif non atteint','ko'],verif:['À vérifier','wa'],retard:['En retard','ko'],none:['Sans page','no']};
@@ -807,7 +809,7 @@ function pageRows(dm,pids,R){
   return pids.map(function(p){
     var x=E.cur?rangeAgg(dm,E.cur.a,E.cur.b,[p]):rangeAgg(dm,'9','9',[p]), z=E.prev?rangeAgg(dm,E.prev.a,E.prev.b,[p]):null, st=latestState(p,dm,t), c=comptesPage(p,dm,t)||{actifs:0,pause:0,renseignes:0};
     var ev=x.nB&&z&&z.nB&&z.b?pct(x.b,z.b):null, an=0;Object.keys(dm[p]||{}).forEach(function(d){if(d>=R.a&&d<=R.b)an+=dm[p][d].anomalies.length});
-    var nob=c.renseignes===0, verif=!nob&&((ev!=null&&ev<=-seuil())||c.actifs<3)||an>0;
+    var nob=c.renseignes===0, verif=!nob&&((ev!=null&&ev<=-seuil())||c.actifs<3)||an>0||ecartNeg(dm,[p],E.cur?E.cur.a:R.a,E.cur?E.cur.b:R.b,x);
     return {p:p,x:x,z:z,c:c,ev:ev,an:an,verif:verif,nob:nob};
   });
 }
