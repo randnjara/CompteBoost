@@ -261,7 +261,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=31"></script><script src="supabase.js?v=31"></script><script src="web.js?v=31"></script>
+<script src="config.js?v=32"></script><script src="supabase.js?v=32"></script><script src="web.js?v=32"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -1390,16 +1390,17 @@ function viewRecap(){
     card('Évolution',a!=null&&b!=null?pctBadge(pct(a,b)):'—',a!=null&&b!=null?delta(a-b)+' <span class="muted">'+mLabel()+'</span>':'')+
     card('Comptes Boost',C.renseignes?'<span class="okc">'+C.actifs+'</span><span class="muted" style="font-weight:600">/'+C.renseignes+'</span>':'—','<span class="chip ok">'+C.actifs+' actif'+(C.actifs>1?'s':'')+'</span> <span class="chip todo">'+C.pause+' en pause</span>')+'</div>';
   /* Par page */
-  var T={b:0,r:0,nB:0,nR:0,nBR:0,bBR:0,rBR:0,p:0};
+  var T={b:0,r:0,nB:0,nR:0,nBR:0,bBR:0,rBR:0,p:0}; var CT={actifs:0,pause:0,renseignes:0};
   var prow=ids.map(function(pid){
     var x=cur.pages[pid], y=prv.pages[pid], vx=mv(x), vy=mv(y), st=latestState(pid,dm,P.b);
     ['b','r','nB','nR','nBR','bBR','rBR'].forEach(function(k){T[k]+=x[k]}); T.p+=vy||0;
     if(!x.nB&&!x.nR&&vy==null)return '';
-    return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td>'+comptesHtml(comptesPage(pid,dm,P.b))+'</td>'+
+    var cp=comptesPage(pid,dm,P.b); if(cp){CT.actifs+=cp.actifs;CT.pause+=cp.pause;CT.renseignes+=cp.renseignes}
+    return '<tr class="click" data-goto-page="'+pid+'"><td><strong>'+esc(S.pages[pid].nom)+'</strong></td><td>'+esc(memberName(S.pages[pid].responsable))+'</td><td>'+comptesHtml(cp)+'</td>'+
       '<td class="n">'+(x.nB?nf(x.b):'—')+'</td><td class="n">'+(x.nR?nfR(x):'—')+'</td><td>'+delta(diffOf(x))+'</td><td class="n muted">'+nf(vy)+'</td><td>'+(vx!=null&&vy!=null?delta(vx-vy,{pct:pct(vx,vy)}):'<span class="muted">—</span>')+'</td></tr>';
   }).join('');
   var vT=S.mesure==='r'?T.r:T.b;
-  prow=(prow||'<tr><td colspan="8" class="empty">Aucune donnée pour ces filtres.</td></tr>')+'<tr class="tot"><td><strong>TOTAL</strong></td><td></td><td></td><td class="n">'+(T.nB?nf(T.b):'—')+'</td><td class="n">'+(T.nR?nfR(T):'—')+'</td><td>'+delta(T.nBR?T.bBR-T.rBR:null)+'</td><td class="n muted">'+nf(T.p)+'</td><td>'+delta(vT-T.p,{pct:pct(vT,T.p)})+'</td></tr>';
+  prow=(prow||'<tr><td colspan="8" class="empty">Aucune donnée pour ces filtres.</td></tr>')+'<tr class="tot"><td><strong>TOTAL</strong></td><td></td><td>'+comptesHtml(CT)+'</td><td class="n">'+(T.nB?nf(T.b):'—')+'</td><td class="n">'+(T.nR?nfR(T):'—')+'</td><td>'+delta(T.nBR?T.rBR-T.bBR:null)+'</td><td class="n muted">'+nf(T.p)+'</td><td>'+delta(vT-T.p,{pct:pct(vT,T.p)})+'</td></tr>';
   /* Par employé */
   var emps={}; ids.forEach(function(pid){var u=S.pages[pid].responsable||'_none';(emps[u]=emps[u]||[]).push(pid)});
   var erow=Object.keys(emps).map(function(u){
