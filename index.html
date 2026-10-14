@@ -436,8 +436,8 @@ function dayMap(){
           var c=+b.messages, p=cum[b.id]; cum[b.id]={v:c,date:d};
           if(stInfo(b.statut).hors)return;
           if(p)any=true;
-          /* Nouveau départ : boost relancé (marqué « départ », ou compteur plus bas après un jour où il n'a pas été rempli) : le compteur repart de 0, donc tout compte */
-          if(p&&(b.depart||(c<p.v&&lastCD&&p.date<lastCD))){nv[b.id]=c;mb+=c;any=true}
+          /* Nouveau départ : boost relancé, marqué « départ » à la saisie : le compteur repart de 0, donc tout compte */
+          if(p&&b.depart){nv[b.id]=c;mb+=c;any=true}
           else if(!p){nv[b.id]=0;ref[b.id]=1;any=any||false}
           else if(c<p.v){nv[b.id]=0;an.push({id:b.id,nom:b.nom,prev:p.v,prevDate:p.date,cur:c})}
           else{nv[b.id]=c-p.v;mb+=c-p.v}
@@ -915,7 +915,7 @@ function gridModel(pid){
         colAny=true;
         if(hors)kind='none';
         else if(p==null){kind='ref'}
-        else if(dm1||(v<p.v&&lastCD&&p.date<lastCD)){kind='ok';dep=true;df=v;tot+=v;any=true}
+        else if(dm1){kind='ok';dep=true;df=v;tot+=v;any=true}
         else if(v<p.v){kind='an';df=v-p.v;col.an.push({id:b.id,nom:b.nom,prev:p.v,cur:v})}
         else{kind='ok';df=v-p.v;tot+=df;any=true}
         prev[b.id]={v:v,date:d};
