@@ -262,7 +262,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=38"></script><script src="supabase.js?v=38"></script><script src="web.js?v=38"></script>
+<script src="config.js?v=39"></script><script src="supabase.js?v=39"></script><script src="web.js?v=39"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -987,7 +987,7 @@ function viewSaisie(){
   var body=M.rows.map(function(b){
     var s=statutAt(pid,b.id,t,b.statut), hors=stInfo(s).hors;
     if(hors&&!cols.some(function(d){return M.cols[d].cells[b.id].v!=null})&&!isAdminMode())return '';
-    var act=s==='termine'?'<span class="muted">Terminé</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Relancer</button>':hors?'<span class="muted">Supprimé</span>':s==='pause'?'<span class="koc">En pause</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Reprendre</button>':'<span class="okc">Actif</span><button type="button" class="bpause" data-bst="'+pid+'|'+b.id+'|pause">'+ico('pause','ic" style="width:12px;height:12px')+' Pause</button>';
+    var act=s==='termine'?'<span class="muted">Terminé</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Relancer</button>':hors?'<span class="muted">Supprimé</span>'+(isAdminMode()?'<button type="button" class="bresume" data-brest="'+pid+'|'+b.id+'">'+ico('play','ic" style="width:12px;height:12px')+' Restaurer</button>':''):s==='pause'?'<span class="koc">En pause</span><button type="button" class="bresume" data-bst="'+pid+'|'+b.id+'|actif">'+ico('play','ic" style="width:12px;height:12px')+' Reprendre</button>':'<span class="okc">Actif</span><button type="button" class="bpause" data-bst="'+pid+'|'+b.id+'|pause">'+ico('pause','ic" style="width:12px;height:12px')+' Pause</button>';
     if(!hors)act+='<button type="button" class="link" data-bst="'+pid+'|'+b.id+'|termine" style="font-size:.66rem">Terminer</button>';
     /* L'employé peut retirer un boost ajouté aujourd'hui par erreur, tant qu'aucun chiffre n'y est saisi */
     var bd=bdef(pid,b.id), neuf=!S.owner&&bd&&bd.creeLe===t&&!cols.some(function(d){return M.cols[d].cells[b.id].v!=null});
@@ -1135,6 +1135,16 @@ function setBoostStatus(pid,bid,statut){
   d.hist=d.hist.filter(function(h){return h.date!==today()});
   d.hist.push({statut:statut,date:today(),le:nowD().toISOString(),par:S.me,parNom:myName()});
   writeDefs(pid,doc,'✓ '+d.nom+' : '+stInfo(statut).l.toLowerCase()+' à partir du '+fmtD(today())+'.');
+}
+/* Annuler une suppression : le boost revient avec son statut d'avant, comme s'il n'avait pas été supprimé ; la trace est gardée */
+function restoreBoost(pid,bid){
+  if(roGuard())return;
+  var doc=defsFor(pid), d=null;doc.liste.forEach(function(x){if(x.id===bid)d=x});if(!d)return;
+  var i=-1;d.hist.forEach(function(h,k){if(h.statut==='supprime')i=k});if(i<0)return;
+  var del=d.hist[i], before='actif';d.hist.forEach(function(h,k){if(k<i&&h.date<=del.date)before=h.statut});if(stInfo(before).hors)before='actif';
+  d.restaurations=(d.restaurations||[]).concat([{suppression:del,le:nowD().toISOString(),par:S.me,parNom:myName()}]);
+  d.hist.splice(i,1);
+  writeDefs(pid,doc,'✓ '+d.nom+' restauré ('+stInfo(before).l.toLowerCase()+').');
 }
 function addBoost(pid){
   if(roGuard())return;
@@ -1691,8 +1701,7 @@ function teamHtml(ids){
     '<div class="tablebox"><table><thead><tr><th>Employé</th><th>Pages attribuées</th><th>Identifiant</th><th>Accès</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div class="msg" id="memMsg" role="status">'+(S.msgs.mem||'')+'</div>'+
     '<ol class="steps"><li>Ajoute l\'employé ici et attribue-lui ses pages dans le tableau des pages.</li><li>Clique <strong>Créer l\'accès</strong> et choisis son mot de passe.</li><li>Copie le message et envoie-le-lui (WhatsApp, Messenger…). Il contient le lien du site, son identifiant et son mot de passe.</li><li>Il se connecte avec ces informations et ne voit que ses pages.</li></ol>'+
-    '<details'+(pageIds().length?'':' open')+' style="margin-top:8px"><summary><b>Restaurer une sauvegarde</b> (fichier sauvegarde-compte-boost.json)</summary><p class="muted" style="font-size:.8rem">Ajoute les pages, l\'historique Excel et les employés de la sauvegarde. Les données déjà présentes ne sont jamais remplacées.</p><input type="file" id="webRestore" accept=".json,application/json"><div class="msg" id="webRestMsg" role="status">'+esc(S.msgs.rest||'')+'</div></details>'+
-    '<p class="muted" style="font-size:.8rem">Lien du site : <b>'+esc(siteUrl())+'</b></p></section>';
+    '<p class="muted" style="font-size:.8rem">Lien du site : <b>'+esc(siteUrl())+'</b></p></section>'+sauvegardeHtml();
 }
 function webPwModal(u,nouveau){
   var m=S.membres[u];
@@ -1743,6 +1752,119 @@ function importBanner(){
     '<div class="msg" id="webRestMsg2" role="status" style="margin-top:8px">'+esc(S.msgs.rest||'')+'</div>'+(S.banRest&&/✓/.test(S.msgs.rest||'')?'<button type="button" class="primary" data-banok="1">C\'est fini, fermer</button>':'')+'</section>';
 }
 document.addEventListener('click',function(ev){if(ev.target.closest&&ev.target.closest('[data-banok]')){S.banRest=false;S.msgs.rest='';render()}});
+
+/* ---------- Sauvegarde, restauration et import Excel (administrateur) ---------- */
+function sauvegardeHtml(){
+  var X=S.xl;
+  return '<section class="panel" style="grid-column:1/-1;white-space:normal;min-width:0;overflow:hidden"><h2>'+ico('save','ic o')+'Sauvegarde et import Excel</h2>'+
+    '<div class="grid" style="gap:14px;grid-template-columns:minmax(0,1fr)">'+
+    '<div><b>1. Télécharger une sauvegarde</b><p class="muted" style="font-size:.8rem;margin:4px 0 8px;white-space:normal;max-width:100%">Copie complète de toutes les données (pages, boosts, saisies, historique, employés) dans un fichier à garder sur ton ordinateur. À faire régulièrement.</p>'+
+      '<button type="button" class="primary" id="bkDl">'+ico('dl','ic" style="color:#fff')+' Télécharger la sauvegarde</button><div class="msg" id="bkMsg" role="status">'+esc(S.msgs.bk||'')+'</div></div>'+
+    '<div><b>2. Restaurer une sauvegarde</b><p class="muted" style="font-size:.8rem;margin:4px 0 8px;white-space:normal;max-width:100%">Remet ce qui manque à partir d\'un fichier de sauvegarde. Les données déjà présentes ne sont jamais remplacées ni supprimées.</p><input type="file" id="webRestore" accept=".json,application/json"><div class="msg" id="webRestMsg" role="status">'+esc(S.msgs.rest||'')+'</div></div>'+
+    '<div><b>3. Importer les données depuis Excel</b><p class="muted" style="font-size:.8rem;margin:4px 0 8px;white-space:normal;max-width:100%">Fichier Excel COMPTE BOOST (une feuille par page : ligne DATE, lignes des boosts, TOTAL, puis messages réels). Seuls les jours <b>qui n\'existent pas encore</b> dans le logiciel sont ajoutés : rien n\'est remplacé. Tu vois la liste avant de confirmer.</p><input type="file" id="xlFile" accept=".xlsx,.xls,.ods">'+
+      '<div class="msg" id="xlMsg" role="status">'+esc(S.msgs.xl||'')+'</div>'+(X?xlPreview(X):'')+'</div>'+
+    '</div></section>';
+}
+function bkSave(name,text){
+  var blob=new Blob([text],{type:'application/json'});
+  try{var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();return true}catch(e){return false}
+}
+function bkDownload(){
+  var sb=window.CB_WEB&&window.CB_WEB.sb;if(!sb)return;
+  function say(t){S.msgs.bk=t;var m=$('bkMsg');if(m)m.textContent=t}
+  var all=[],step=500;say('Préparation de la sauvegarde…');
+  function page(i){return sb.from('docs').select('path,data').order('path').range(i,i+step-1).then(function(r){if(r.error)throw r.error;all=all.concat(r.data||[]);say('Préparation… '+all.length+' éléments');return (r.data||[]).length===step?page(i+step):all})}
+  page(0).then(function(rows){
+    var j={format:'compte-boost-sauvegarde',exporteLe:nowD().toISOString(),source:'Sauvegarde depuis le logiciel',docs:rows.map(function(x){return {path:x.path,data:x.data}})};
+    var name='sauvegarde-compte-boost-'+today()+'.json';
+    say(bkSave(name,JSON.stringify(j))?'✓ Sauvegarde téléchargée : '+name+' ('+rows.length+' éléments). Garde ce fichier précieusement.':'Téléchargement impossible sur cet appareil.');
+  },function(e){say('Sauvegarde impossible : '+(e&&e.message||'erreur')+'.')});
+}
+/* --- Import Excel : mêmes règles que l'import fait par Claude (compteurs par numéro de boost, différence Excel prioritaire) --- */
+function xlNorm(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
+function xlNum(v){if(v==null||v===''||typeof v==='boolean')return null;if(typeof v==='number')return isFinite(v)?v:null;var n=parseFloat(String(v).trim().replace(',','.'));return isNaN(n)||!/^\s*-?[\d.,]+\s*$/.test(String(v))?null:n}
+function xlDate(v){if(!(v instanceof Date)||isNaN(v))return null;var d=new Date(v.getTime()+12*3600e3);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function xlHeure(v){v=v==null?'':String(v);var m=v.match(/^\s*(\d{1,2})\s*[hH:]\s*(\d{0,2})/);if(m&&+m[1]<24&&+(m[2]||0)<60)return pad(+m[1])+':'+pad(+(m[2]||0));return '12:00'}
+function xlSheet(ws){
+  var M=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true}), T=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false}), dr=-1, lc=-1, cell=function(r,c){return (M[r]||[])[c]};
+  for(var r=0;r<8&&dr<0;r++)for(var c=0;c<3;c++){var v=cell(r,c);if(typeof v==='string'&&v.trim().toUpperCase()==='DATE'){dr=r;lc=c;break}}
+  if(dr<0)return {err:'ligne DATE introuvable'};
+  var tr=-1;for(r=dr+1;r<80;r++){v=cell(r,lc);if(typeof v==='string'&&v.trim().toUpperCase().indexOf('TOTAL')===0){tr=r;break}}
+  if(tr<0)return {err:'ligne TOTAL introuvable'};
+  var rows=[];for(r=dr+1;r<tr;r++){v=cell(r,lc);if(typeof v==='number')rows.push({r:r,k:Math.round(v)})}
+  var w=0;M.forEach(function(x){if(x&&x.length>w)w=x.length});
+  var days=[];
+  for(c=lc+1;c<w;c++){
+    var d=xlDate(cell(dr,c));if(!d)continue;
+    var cnt={},dif={};
+    rows.forEach(function(o){var n=xlNum(cell(o.r,c));if(n!=null)cnt['b'+o.k]=n;var lab=cell(o.r+1,lc);if((lab==null||lab==='')&&o.r+1<tr){var x=xlNum(cell(o.r+1,c));if(x!=null)dif['b'+o.k]=x}});
+    days.push({d:d,col:c,cnt:cnt,dif:dif,reels:xlNum(cell(tr+1,c)),total:xlNum(cell(tr,c)),heure:dr>0?(T[dr-1]||[])[c]:null});
+  }
+  days.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.col-b.col});
+  return {days:days};
+}
+function xlBuild(wb,fname){
+  var byName={};pageIds().forEach(function(p){byName[xlNorm(S.pages[p].nom)]=p});
+  var dm=dayMap(), t=today(), out={rows:[],skip:[],fname:fname};
+  wb.SheetNames.forEach(function(sn){
+    var pid=byName[xlNorm(sn)];if(!pid){out.skip.push(sn+' : aucune page de ce nom');return}
+    var P=xlSheet(wb.Sheets[sn]);if(P.err){out.skip.push(sn+' : '+P.err);return}
+    var js=[],seen={};
+    P.days.forEach(function(x,i){
+      if(x.d<DEBUT||x.d>t||seen[x.d]||(dm[pid]||{})[x.d])return;
+      var anyC=Object.keys(x.cnt).some(function(k){return x.cnt[k]>0});if(!anyC&&!((x.reels||0)>0))return;
+      seen[x.d]=1;
+      var boosts=[],mb=0,warn=[];
+      Object.keys(x.cnt).sort(function(a,b){return +a.slice(1)-+b.slice(1)}).forEach(function(k){
+        var c=x.cnt[k];if(c<=0)return;
+        var prev=null;for(var j=i-1;j>=0&&prev==null;j--){var y=P.days[j].cnt[k];if(y>0)prev=y}
+        var calc=prev==null?0:(c>=prev?c-prev:0), dv=x.dif[k], nv=dv!=null&&dv>=0?dv:calc;
+        if(prev!=null&&c<prev)warn.push(k.replace('b','Boost ')+' en baisse');
+        nv=Math.round(nv);mb+=nv;boosts.push({id:k,messages:Math.round(c),nouveaux:nv});
+      });
+      var reels=x.reels==null?null:Math.round(x.reels), h=xlHeure(x.heure), p=x.d.split('-'), hh=h.split(':');
+      var utc=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],+hh[0]-3,+hh[1]));
+      js.push({id:pid.slice(2)+'_'+x.d,date:x.d,jour:JOURS[parse(x.d).getDay()],heure:h,horodatage:utc.toISOString(),
+        totaux:{actifs:boosts.length,pause:0,supprimes:0,total:boosts.length,messagesBoosts:mb,reels:reels,ecart:reels==null?null:reels-mb},boosts:boosts});
+      if(reels==null)warn.push('messages réels absents');
+      out.rows.push({p:pid,d:x.d,mb:mb,tot:x.total,r:reels,nb:boosts.length,warn:warn,j:js[js.length-1],on:reels!=null});
+    });
+  });
+  return out;
+}
+function xlPreview(X){
+  if(!X.rows.length)return '<div class="note">'+ico('info')+'<span>Aucun nouveau jour à ajouter : tous les jours de ce fichier existent déjà dans le logiciel.</span></div>'+(X.skip.length?'<div class="muted" style="font-size:.76rem">Feuilles ignorées : '+esc(X.skip.join(' ; '))+'</div>':'');
+  var n=X.rows.filter(function(o){return o.on}).length;
+  var tr=X.rows.map(function(o,i){return '<tr><td><input type="checkbox" data-xlrow="'+i+'"'+(o.on?' checked':'')+' aria-label="Ajouter ce jour"></td><td>'+esc(S.pages[o.p].nom)+'</td><td>'+fmtD(o.d)+'</td><td class="n">'+o.nb+'</td><td class="n">'+nf(o.mb)+(o.tot!=null&&Math.round(o.tot)!==o.mb?' <span class="koc" title="TOTAL de l\'Excel">(Excel '+nf(Math.round(o.tot))+')</span>':'')+'</td><td class="n">'+nf(o.r)+'</td><td class="koc" style="font-size:.76rem">'+esc(o.warn.join(', '))+'</td></tr>'}).join('');
+  return '<div class="tb" style="max-height:340px;overflow:auto"><table><thead><tr><th></th><th>Page</th><th>Date</th><th class="n">Boosts</th><th class="n">Msg boost</th><th class="n">Msg réels</th><th>À vérifier</th></tr></thead><tbody>'+tr+'</tbody></table></div>'+
+    (X.skip.length?'<div class="muted" style="font-size:.76rem">Feuilles ignorées : '+esc(X.skip.join(' ; '))+'</div>':'')+
+    '<div class="muted" style="font-size:.76rem">Décoche les jours à ne pas ajouter. Les jours sans messages réels sont décochés par défaut.</div>'+
+    '<div class="row"><button type="button" class="primary" id="xlGo"'+(n?'':' disabled')+'>Ajouter '+n+' jour'+(n>1?'s':'')+'</button><button type="button" id="xlCancel">Annuler</button></div>';
+}
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest&&ev.target.closest('#bkDl,#xlGo,#xlCancel');if(!b)return;
+  if(b.id==='bkDl'){bkDownload();return}
+  if(b.id==='xlCancel'){S.xl=null;S.msgs.xl='';render();return}
+  var X=S.xl;if(!X)return;
+  var now=nowD().toISOString(), sel=X.rows.filter(function(o){return o.on}), by={}, docs=[];if(!sel.length)return;
+  sel.forEach(function(o){(by[o.p]=by[o.p]||[]).push(o.j)});
+  Object.keys(by).forEach(function(pid){docs.push({path:'historique/'+pid+'_excel_'+now.replace(/[^0-9]/g,'').slice(0,14),data:{pageId:pid,importeLe:now,source:'Excel '+X.fname,jours:by[pid]}})});
+  b.disabled=true;S.msgs.xl='Import en cours…';var m=$('xlMsg');if(m)m.textContent=S.msgs.xl;
+  window.CB_WEB.importer(docs).then(function(){S.xl=null;S.msgs.xl='✓ '+sel.length+' jour'+(sel.length>1?'s':'')+' ajouté'+(sel.length>1?'s':'')+' depuis '+X.fname+'.';render()},function(e){b.disabled=false;S.msgs.xl='Import interrompu : '+(e&&e.message||'erreur')+'. Tu peux relancer, rien ne sera dupliqué.';render()});
+});
+document.addEventListener('change',function(ev){
+  if(ev.target.id!=='xlFile'||!ev.target.files[0])return;
+  var f=ev.target.files[0], rd=new FileReader();
+  if(!window.XLSX){S.msgs.xl='Lecture Excel indisponible : recharge la page puis réessaie.';render();return}
+  S.msgs.xl='Lecture du fichier…';S.xl=null;render();
+  rd.onload=function(){
+    try{var wb=XLSX.read(new Uint8Array(rd.result),{type:'array',cellDates:true});S.xl=xlBuild(wb,f.name);S.msgs.xl=f.name+' : '+S.xl.rows.length+' nouveau'+(S.xl.rows.length>1?'x':'')+' jour'+(S.xl.rows.length>1?'s':'')+' trouvé'+(S.xl.rows.length>1?'s':'')+'.'}
+    catch(e){S.xl=null;S.msgs.xl='Impossible de lire ce fichier Excel.'}
+    render();
+  };
+  rd.readAsArrayBuffer(f);
+});
+document.addEventListener('change',function(ev){var i=ev.target.dataset&&ev.target.dataset.xlrow;if(i==null||!S.xl)return;S.xl.rows[+i].on=ev.target.checked;render()});
 
 /* ---------- Paramètres ---------- */
 function viewParams(){
@@ -1872,7 +1994,8 @@ document.addEventListener('click',function(ev){
   if(ds.docommit){commitDay(S.modal.pid,S.modal.d);return}
   if(ds.rect){var q=sp('rect');askRect(q[0],q[1]);return}
   if(ds.dorect){var mo=($('rectMotif')||{}).value||'';if(!mo.trim()){$('rectMsg').textContent='Le motif est obligatoire.';return}doRect(S.modal.pid,S.modal.d,mo.trim());return}
-  if(ds.bst){var bs=sp('bst');setBoostStatus(bs[0],bs[1],bs[2]);return}
+  if(ds.brest){var br2=sp('brest');restoreBoost(br2[0],br2[1]);return}
+  if(ds.bst){var bs=sp('bst');if(bs[2]==='supprime'){var bd2=bdef(bs[0],bs[1]);if(!window.confirm('Supprimer '+(bd2&&bd2.nom||'ce boost')+' ? Les chiffres déjà saisis sont gardés, et l\'administrateur peut le restaurer.'))return}setBoostStatus(bs[0],bs[1],bs[2]);return}
   if(ds.addboost){addBoost(ds.addboost);return}
   if(ds.sznav){S.sz.w0=addDays(szCols()[0],7*(+ds.sznav));render();return}
   if(ds.szrole){if(S.owner){S.sz.role=ds.szrole;S.ed={};render()}return}
