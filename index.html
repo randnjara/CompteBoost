@@ -176,6 +176,7 @@ button:disabled{opacity:.5;cursor:default}
 .sgrid td:not(.bn){width:84px}
 .sgrid .cell input{border:0;border-bottom:1px solid var(--line);border-radius:8px 8px 0 0;text-align:center;width:100%;padding:6px 2px;font-weight:700;background:none}
 .sgrid .cell .df{font-family:var(--mono);font-size:.74rem;font-weight:700;padding:3px 0;color:var(--up)}
+.sgrid .cell .dep{display:block;margin:0 auto 3px;border:0;background:none;padding:0;color:var(--accent);font-size:.58rem;text-decoration:underline;cursor:pointer;white-space:nowrap}
 .sgrid .cell .df.down{color:var(--down)} .sgrid .cell .df.mu{color:var(--muted)}
 .sgrid .cell.lock{background:var(--soft)}
 .sgrid .cell.lock input{color:var(--ink)}
@@ -261,7 +262,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=35"></script><script src="supabase.js?v=35"></script><script src="web.js?v=35"></script>
+<script src="config.js?v=36"></script><script src="supabase.js?v=36"></script><script src="web.js?v=36"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -361,7 +362,7 @@ function jourEntries(){
   return Object.keys(S.jours).map(function(k){
     var j=S.jours[k], r=j.rectifs||[], last=r.length?r[r.length-1].le:j.enregistreLe;
     return {id:'j_'+k,fromJour:true,jourId:k,doc:j,pageId:j.pageId,date:j.date,auteur:j.auteur,horodatage:last||j.enregistreLe||'',jour:JOURS[parse(j.date).getDay()],heure:hmOf(j.enregistreLe),mode:'cumul',saisieCompteurs:true,
-      boosts:(j.boosts||[]).map(function(b){return{id:b.id,nom:b.nom,statut:b.statut||'actif',messages:b.messages==null||b.messages===''?null:+b.messages}}),totaux:{reels:j.reels==null||j.reels===''?null:+j.reels}};
+      boosts:(j.boosts||[]).map(function(b){var o={id:b.id,nom:b.nom,statut:b.statut||'actif',messages:b.messages==null||b.messages===''?null:+b.messages};if(b.depart)o.depart=true;return o}),totaux:{reels:j.reels==null||j.reels===''?null:+j.reels}};
   });
 }
 function allEntries(){
@@ -414,14 +415,14 @@ function boostList(pid,date,base){
 }
 /* Valeur du jour d'une page. Un jour enregistré dans la grille fait foi ; sinon dernière saisie.
    Nouveaux messages = compteur cumulé du jour − dernier compteur valide précédent ; 1er compteur = référence ;
-   compteur en baisse = anomalie (0 compté). */
+   compteur en baisse = anomalie (0 compté), sauf nouveau départ d'un boost relancé (repart de 0 : le compteur compte en entier). */
 function dayMap(){
   if(S._dm&&S._dmv===S.ver)return S._dm;
   var by={}; S.preB={}; S.cumAt={}; var hp=S.histPages||{};
   allEntries().forEach(function(e){if(!S.pages[e.pageId]||!e.date)return;if(e.auteur==='import'&&!e.fromHist&&hp[e.pageId])return;var p=by[e.pageId]||(by[e.pageId]={});(p[e.date]=p[e.date]||[]).push(e)});
   var m={};
   Object.keys(by).forEach(function(pid){
-    var out=m[pid]={}, lastB=null, cum={}, ca=S.cumAt[pid]=[];
+    var out=m[pid]={}, lastB=null, cum={}, ca=S.cumAt[pid]=[], lastCD=null;
     Object.keys(by[pid]).sort().forEach(function(d){
       var es=by[pid][d].sort(function(a,b){return ((a.fromJour?1:0)-(b.fromJour?1:0))||(a.horodatage<b.horodatage?-1:1)});
       var wB=null,wC=null,wR=null,J=null;
@@ -435,7 +436,9 @@ function dayMap(){
           var c=+b.messages, p=cum[b.id]; cum[b.id]={v:c,date:d};
           if(stInfo(b.statut).hors)return;
           if(p)any=true;
-          if(!p){nv[b.id]=0;ref[b.id]=1;any=any||false}
+          /* Nouveau départ : boost relancé (marqué « départ », ou compteur plus bas après un jour où il n'a pas été rempli) : le compteur repart de 0, donc tout compte */
+          if(p&&(b.depart||(c<p.v&&lastCD&&p.date<lastCD))){nv[b.id]=c;mb+=c;any=true}
+          else if(!p){nv[b.id]=0;ref[b.id]=1;any=any||false}
           else if(c<p.v){nv[b.id]=0;an.push({id:b.id,nom:b.nom,prev:p.v,prevDate:p.date,cur:c})}
           else{nv[b.id]=c-p.v;mb+=c-p.v}
         });
@@ -445,7 +448,7 @@ function dayMap(){
         wC.boosts.forEach(function(b){nv[b.id]=b.nouveaux;if(b.messages!=null&&b.messages!=='')cum[b.id]={v:+b.messages,date:d}});
       }
       if(wB)lastB=wB;
-      var snap={};Object.keys(cum).forEach(function(k){snap[k]=cum[k]});ca.push({date:d,cum:snap});
+      var snap={};Object.keys(cum).forEach(function(k){snap[k]=cum[k]});ca.push({date:d,cum:snap,c:!!wC});if(wC)lastCD=d;
       if(d<DEBUT){S.preB[pid]=lastB?lastB.boosts:[];return}
       var last=es[es.length-1], boosts=boostList(pid,d,lastB?lastB.boosts:[]), c=comptes(boosts);
       /* Un boost n'est compté actif ce jour-là que si son compteur a été rempli */
@@ -887,12 +890,14 @@ function gridModel(pid){
   var dm=dayMap(), cols=szCols(), t=today(), pm=dm[pid]||{}, admin=isAdminMode();
   var st=latestState(pid,dm,t), rows=boostList(pid,t,st?st.boosts:[]), seen={};rows.forEach(function(b){seen[b.id]=1});
   cols.forEach(function(d){var c=pm[d];if(c)c.counters.forEach(function(b){if(!seen[b.id]){seen[b.id]=1;var dd=bdef(pid,b.id);rows.push({id:b.id,nom:dd&&dd.nom||b.nom,statut:statutAt(pid,b.id,t,b.statut)})}})});
-  var prev=cumBefore(pid,cols[0]), M={pid:pid,cols:{},order:cols,rows:rows,per:0,perN:0,perR:0,perRN:0};
+  var prev=cumBefore(pid,cols[0]), lastCD=null;(S.cumAt[pid]||[]).forEach(function(x){if(x.c&&x.date<cols[0])lastCD=x.date});
+  var M={pid:pid,cols:{},order:cols,rows:rows,per:0,perN:0,perR:0,perRN:0};
   cols.forEach(function(d){
     var c=pm[d], key=pid+'_'+d, ed=S.ed[key], br=brouOf(pid,d), rec=!!(c&&(c.J||c.boostsDuJour||c.totaux.reels!=null));
     /* Saisie = employé seulement ; l'administrateur ne peut que rectifier un jour déjà enregistré */
     var lock=!!S.apercu||d>t||d<DEBUT||(S.owner?!admin:(rec||d<SAISIE_DEBUT||d<addDays(t,-RATTRAPAGE)));
-    var cm={};if(c)c.counters.forEach(function(b){cm[b.id]=b.messages});
+    var cm={},cdep={};if(c)c.counters.forEach(function(b){cm[b.id]=b.messages;if(b.depart)cdep[b.id]=1});
+    var colAny=false;
     var col={date:d,key:key,rec:rec,lock:lock,c:c,br:br,cells:{},tot:null,r:null,boosts:[],an:[]};
     var any=false,tot=0;
     rows.forEach(function(b){
@@ -904,17 +909,21 @@ function gridModel(pid){
       else if(br&&br.boosts&&b.id in br.boosts)v=numOrNull(br.boosts[b.id]);
       else v=null;
       var raw=ed&&ed.b&&b.id in ed.b?ed.b[b.id]:(v==null?'':String(v));
-      var p=prev[b.id], df=null, kind='none';
+      var p=prev[b.id], df=null, kind='none', dep=false;
+      var dm1=ed&&ed.dep&&b.id in ed.dep?ed.dep[b.id]:rec?!!cdep[b.id]:!!(br&&br.dep&&br.dep[b.id]);
       if(v!=null){
+        colAny=true;
         if(hors)kind='none';
         else if(p==null){kind='ref'}
+        else if(dm1||(v<p.v&&lastCD&&p.date<lastCD)){kind='ok';dep=true;df=v;tot+=v;any=true}
         else if(v<p.v){kind='an';df=v-p.v;col.an.push({id:b.id,nom:b.nom,prev:p.v,cur:v})}
         else{kind='ok';df=v-p.v;tot+=df;any=true}
         prev[b.id]={v:v,date:d};
       }
-      col.cells[b.id]={v:v,raw:raw,s:s,hors:hors,df:df,kind:kind,editable:!lock&&s!=='pause'&&!hors||(!lock&&v!=null)};
-      if(!hors||v!=null)col.boosts.push({id:b.id,nom:b.nom,statut:s,messages:v});
+      col.cells[b.id]={v:v,raw:raw,s:s,hors:hors,df:df,kind:kind,dep:dep,man:!!dm1,key:pid+'|'+d+'|'+b.id,editable:!lock&&s!=='pause'&&!hors||(!lock&&v!=null)};
+      if(!hors||v!=null)col.boosts.push(dep?{id:b.id,nom:b.nom,statut:s,messages:v,depart:true}:{id:b.id,nom:b.nom,statut:s,messages:v});
     });
+    if(colAny)lastCD=d;
     /* Jour déjà enregistré et non modifié : les chiffres officiels du tableau de bord */
     if(rec&&!(ed&&ed.dirty)&&c.totaux.messagesBoosts!=null){tot=c.totaux.messagesBoosts;any=true}
     col.tot=any?tot:null;
@@ -933,8 +942,10 @@ function gridModel(pid){
 }
 function dfHtml(cell){
   if(cell.v==null)return '<span class="df mu">—</span>';
+  var ed=cell.editable&&cell.key;
+  if(cell.dep)return '<span class="df" title="Boost relancé : le compteur repart de 0, tout compte comme nouveaux messages">départ +'+nf(cell.df)+'</span>'+(ed&&cell.man?'<button type="button" class="dep" data-dep="'+cell.key+'|0">annuler</button>':'');
   if(cell.kind==='ref')return '<span class="df mu" title="Premier compteur : sert de référence (0 nouveau message)">réf.</span>';
-  if(cell.kind==='an')return '<span class="df down" title="Compteur inférieur au précédent : anomalie">'+sg(cell.df)+'</span>';
+  if(cell.kind==='an')return '<span class="df down" title="Compteur inférieur au précédent : anomalie">'+sg(cell.df)+'</span>'+(ed?'<button type="button" class="dep" data-dep="'+cell.key+'|1" title="Boost relancé : le compteur repart de zéro">Nouveau départ ?</button>':'');
   if(cell.kind==='ok')return '<span class="df">+'+nf(cell.df)+'</span>';
   return '<span class="df mu">—</span>';
 }
@@ -1025,7 +1036,7 @@ function refreshGrid(pid){
 var draftTimers={};
 function editCell(pid,d,field,bid,val){
   var key=pid+'_'+d, ed=S.ed[key]||(S.ed[key]={b:{}});
-  if(field==='r')ed.r=val;else ed.b[bid]=val;
+  if(field==='r')ed.r=val;else if(field==='dep')(ed.dep=ed.dep||{})[bid]=val;else ed.b[bid]=val;
   ed.dirty=true;
   var col=gridModel(pid).cols[d];
   if(!col.rec){S.saveState[key]={st:'saving'};clearTimeout(draftTimers[key]);draftTimers[key]=setTimeout(function(){saveDraft(pid,d)},700)}
@@ -1038,7 +1049,7 @@ function saveDraft(pid,d){
   var mine=(S.brou[S.me]||{})[key], now=nowD().toISOString();
   var base=mine||{}, b=Object.assign({},base.boosts||{});
   Object.keys(ed.b).forEach(function(k){b[k]=ed.b[k]});
-  var doc={pageId:pid,date:d,boosts:b,reels:'r' in ed?ed.r:(base.reels==null?'':base.reels),creeLe:base.creeLe||now,majLe:now,auteur:S.me};
+  var dep=Object.assign({},base.dep||{},ed.dep||{});var doc={pageId:pid,date:d,boosts:b,dep:dep,reels:'r' in ed?ed.r:(base.reels==null?'':base.reels),creeLe:base.creeLe||now,majLe:now,auteur:S.me};
   (S.brou[S.me]=S.brou[S.me]||{})[key]=doc; bump();
   S.db.doc('saisies/'+S.me+'/brouillons/'+key).set(doc).then(function(){S.saveState[key]={st:'saved'};refreshOrSoft(pid)},function(){S.saveState[key]={st:'err'};refreshOrSoft(pid)});
 }
@@ -1063,7 +1074,7 @@ function askCommit(pid,d){
     '<div class="row" style="justify-content:flex-end"><button type="button" data-close="1">Annuler</button><button type="button" class="primary" data-docommit="1">Confirmer l\'enregistrement</button></div>'};
   render();
 }
-function cleanBoosts(L){return L.map(function(b){return {id:b.id,nom:b.nom,statut:b.statut,messages:b.messages}})}
+function cleanBoosts(L){return L.map(function(b){var o={id:b.id,nom:b.nom,statut:b.statut,messages:b.messages};if(b.depart)o.depart=true;return o})}
 function commitDay(pid,d){
   if(S.owner&&!isAdminMode())return;
   var k=checkDay(pid,d), col=k.col, key=pid+'_'+d, ref=S.db.doc('jours/'+key), now=nowD().toISOString(), br=brouOf(pid,d);
@@ -1292,7 +1303,7 @@ function dayDetail(pid,d){
   var dm=dayMap(), c=(dm[pid]||{})[d], s=dayStatus(pid,d,dm), before=cumBefore(pid,d), J=c&&c.J, br=brouOf(pid,d);
   var bl=c?c.boosts:boostList(pid,d,(latestState(pid,dm,d)||{boosts:[]}).boosts), cm={};(c?c.counters:[]).forEach(function(b){cm[b.id]=b.messages});
   var rows=bl.map(function(b){var v=b.id in cm?cm[b.id]:null,p=before[b.id],n=c&&b.id in c.nv?c.nv[b.id]:null,ref=c&&c.ref[b.id];
-    return '<tr><td class="pg">'+esc(b.nom)+'</td><td><span class="chip '+(stInfo(b.statut).actif?'ok':b.statut==='pause'?'ko':'no')+'">'+stInfo(b.statut).l+'</span></td><td class="n">'+nf(v)+'</td><td class="n">'+(p?nf(p.v)+' <span class="muted" style="font-weight:500">('+short(p.date)+')</span>':'—')+'</td><td class="n">'+(ref?'<span class="muted">référence</span>':n==null?'—':v!=null&&p&&v<p.v?'<span class="koc">'+sg(v-p.v)+' (anomalie)</span>':'+'+nf(n))+'</td></tr>'}).join('')||'<tr><td colspan="5" class="empty">Aucun boost.</td></tr>';
+    return '<tr><td class="pg">'+esc(b.nom)+'</td><td><span class="chip '+(stInfo(b.statut).actif?'ok':b.statut==='pause'?'ko':'no')+'">'+stInfo(b.statut).l+'</span></td><td class="n">'+nf(v)+'</td><td class="n">'+(p?nf(p.v)+' <span class="muted" style="font-weight:500">('+short(p.date)+')</span>':'—')+'</td><td class="n">'+(ref?'<span class="muted">référence</span>':n==null?'—':v!=null&&p&&v<p.v?(c.anomalies.some(function(x){return x.id===b.id})?'<span class="koc">'+sg(v-p.v)+' (anomalie)</span>':'+'+nf(n)+' <span class="muted">(nouveau départ)</span>'):'+'+nf(n))+'</td></tr>'}).join('')||'<tr><td colspan="5" class="empty">Aucun boost.</td></tr>';
   var rect=(J&&J.rectifs||[]).map(function(r){return '<tr><td class="num" style="font-size:.76rem">'+stamp(r.le)+'</td><td>'+esc(r.parNom||memberName(r.par))+'</td><td style="white-space:normal">'+esc(r.motif)+'</td><td class="n">'+nf(r.avant.totalBoost)+' / '+nf(r.avant.reels)+'</td><td class="n">'+nf(r.apres.totalBoost)+' / '+nf(r.apres.reels)+'</td></tr>'}).join('');
   var dem=allDemandes().filter(function(x){return x.pageId===pid&&x.date===d});
   var html='<div class="bh"><h2>'+ico('cal','ic')+esc(S.pages[pid].nom)+' · '+dLong(d)+'</h2><button type="button" data-close="1">Fermer</button></div>'+
@@ -1856,6 +1867,7 @@ document.addEventListener('click',function(ev){
   if(ds.back){go(S.prevView&&S.prevView!==S.view?S.prevView:(S.owner?'dash':'dash'));return}
   if(ds.dayDetail){var x=sp('dayDetail');dayDetail(x[0],x[1]);return}
   if(ds.close){S.modal=null;render();return}
+  if(ds.dep){var g=ds.dep.split('|');editCell(g[0],g[1],'dep',g[2],g[3]==='1');return}
   if(ds.commit){var c=sp('commit');askCommit(c[0],c[1]);return}
   if(ds.docommit){commitDay(S.modal.pid,S.modal.d);return}
   if(ds.rect){var q=sp('rect');askRect(q[0],q[1]);return}
