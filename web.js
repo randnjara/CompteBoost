@@ -19,12 +19,92 @@ function rid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 var subs={}, cache={};
 function snapOf(parent){var m=cache[parent]||{};var docs=Object.keys(m).sort().map(function(p){var d=m[p];return {id:idOf(p),exists:true,data:function(){return d}}});return {docs:docs,size:docs.length,empty:!docs.length}}
 function notify(parent){(subs[parent]||[]).forEach(function(cb){try{cb(snapOf(parent))}catch(e){console.error(e)}})}
+/* ---------- Hors ligne : copie locale des données (IndexedDB) et file d'envoi (localStorage) ----------
+   Sans Internet, l'application lit la dernière copie et garde chaque écriture sur l'appareil ;
+   dès que la connexion revient, tout est envoyé automatiquement, dans l'ordre. */
+var OFF=false, UID=null, outbox=[], conflits=[], flushing=false;
+var idb=null;
+function idbOpen(){if(idb)return idb;idb=new Promise(function(ok,no){try{var r=indexedDB.open('compte-boost',1);r.onupgradeneeded=function(){r.result.createObjectStore('kv')};r.onsuccess=function(){ok(r.result)};r.onerror=function(){no(r.error)}}catch(e){no(e)}});return idb}
+function idbGet(k){return idbOpen().then(function(d){return new Promise(function(ok){var r=d.transaction('kv').objectStore('kv').get(k);r.onsuccess=function(){ok(r.result)};r.onerror=function(){ok(undefined)}})}).catch(function(){return undefined})}
+function idbSet(k,v){return idbOpen().then(function(d){return new Promise(function(ok){var t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=function(){ok(true)};t.onerror=function(){ok(false)}})}).catch(function(){return false})}
+function lsGet(k,def){try{var v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function boxKey(){return 'cb-outbox-'+UID}
+function saveBox(){lsSet(boxKey(),outbox);lsSet('cb-conflits-'+UID,conflits);badge()}
+function applyOp(o){
+  var p=parentOf(o.path);if(!cache[p])return;
+  if(o.op==='set')cache[p][o.path]=o.data;
+  else if(o.op==='update')cache[p][o.path]=Object.assign({},cache[p][o.path]||{},o.patch);
+  else if(o.op==='delete')delete cache[p][o.path];
+}
+function withPending(parent){outbox.forEach(function(o){if(parentOf(o.path)===parent)applyOp(o)})}
+function setOff(v){if(OFF!==v){OFF=v;badge()}}
 function loadAll(parent){
   var out={}, step=500;
   function page(from){return q(sb.from('docs').select('path,data').eq('parent',parent).order('path').range(from,from+step-1)).then(function(rows){rows.forEach(function(r){out[r.path]=r.data});return rows.length===step?page(from+step):out})}
-  return page(0).then(function(m){cache[parent]=m;notify(parent);return m});
+  if(OFF&&!navigator.onLine)return fromLocal(parent);
+  return page(0).then(function(m){setOff(false);cache[parent]=m;if(UID)idbSet(UID+'|'+parent,m);withPending(parent);notify(parent);return m},
+    function(e){if(!net(e))throw e;setOff(true);return fromLocal(parent)});
+}
+function fromLocal(parent){
+  return idbGet(UID+'|'+parent).then(function(m){
+    if(!m&&!cache[parent])throw new Error('Pas encore de copie sur cet appareil : connecte-toi une première fois avec Internet.');
+    if(m)cache[parent]=m;withPending(parent);notify(parent);return cache[parent];
+  });
 }
 function local(path,data){var p=parentOf(path);if(!cache[p])return;if(data==null)delete cache[p][path];else cache[p][path]=data;notify(p)}
+/* Écriture : en ligne directement ; sans connexion, mise en file et affichée tout de suite */
+function enFile(o){
+  o.t=Date.now();
+  /* L'heure officielle reste celle du serveur à l'envoi ; on garde aussi l'heure de l'appareil, pour information */
+  if(o.op==='set'&&/^jours\//.test(o.path)&&o.data)o.data=Object.assign({},o.data,{horsLigne:true,saisiSurAppareilLe:new Date().toISOString()});outbox.push(o);saveBox();
+  var p=parentOf(o.path);if(cache[p]){applyOp(o);notify(p);if(UID)idbSet(UID+'|'+p,stripPending(p))}
+  if(navigator.onLine)setTimeout(flush,800);
+  return Promise.resolve();
+}
+function stripPending(p){return cache[p]}
+function ecrire(o,direct){
+  if(OFF&&!navigator.onLine||outbox.length)return enFile(o);
+  return direct().then(function(r){setOff(false);return r},function(e){if(!net(e))throw e;setOff(true);return enFile(o)});
+}
+function envoyer(o){
+  if(o.op==='update')return q(sb.rpc('fusion',{p:o.path,patch:o.patch}));
+  if(o.op==='delete')return q(sb.from('docs').delete().eq('path',o.path));
+  if(!o.creer)return q(sb.from('docs').upsert({path:o.path,parent:parentOf(o.path),data:o.data}));
+  /* Nouveau document créé hors ligne : jamais écraser ce que quelqu'un d'autre a enregistré entre-temps */
+  return sb.from('docs').insert({path:o.path,parent:parentOf(o.path),data:o.data}).then(function(r){
+    if(!r.error)return;
+    if(r.error.code==='23505'||/duplicate/i.test(r.error.message||'')){conflits.push({path:o.path,data:o.data,le:new Date().toISOString()});return}
+    throw err(r.error);
+  });
+}
+function flush(){
+  if(flushing||!outbox.length||!UID)return Promise.resolve();
+  flushing=true;badge();
+  function next(){
+    if(!outbox.length)return Promise.resolve(true);
+    var o=outbox[0];
+    return envoyer(o).then(function(){outbox.shift();saveBox();return next()},function(e){
+      if(net(e)||/jwt|token|401/i.test(String(e&&e.message||''))){setOff(true);if(!net(e))sb.auth.refreshSession().catch(function(){});return false}
+      conflits.push({path:o.path,data:o.data||o.patch,erreur:String(e&&e.message||e),le:new Date().toISOString()});outbox.shift();saveBox();return next();
+    });
+  }
+  return next().then(function(done){flushing=false;if(done){setOff(false);envoye=Date.now();refresh()}badge()},function(){flushing=false;badge()});
+}
+var envoye=0, pill=null;
+function badge(){
+  if(!document.body)return;
+  if(!pill){pill=document.createElement('div');pill.className='cb-net';pill.setAttribute('role','status');document.body.appendChild(pill)}
+  var n=outbox.length, t='', c='';
+  if(conflits.length){t='⚠ '+conflits.length+' saisie'+(conflits.length>1?'s':'')+' non envoyée'+(conflits.length>1?'s':'')+' (déjà enregistrée par quelqu\u2019un d\u2019autre). Elle reste gardée sur cet appareil.';c='ko'}
+  else if(OFF||!navigator.onLine){t='Hors ligne'+(n?' · '+n+' enregistrement'+(n>1?'s':'')+' gardé'+(n>1?'s':'')+' sur cet appareil, envoi automatique au retour d\u2019Internet':' · tu peux continuer la saisie');c='off'}
+  else if(n){t='Envoi en cours… '+n+' enregistrement'+(n>1?'s':'');c='off'}
+  else if(Date.now()-envoye<6000){t='✓ Tout est envoyé';c='ok';setTimeout(badge,6200)}
+  pill.textContent=t;pill.className='cb-net '+c;pill.style.display=t?'':'none';
+}
+window.addEventListener('online',function(){flush();refresh()});
+window.addEventListener('offline',function(){setOff(true)});
+setInterval(function(){if(outbox.length)flush()},20000);
 var channel=null;
 function live(){
   if(channel)return;
@@ -35,14 +115,22 @@ function live(){
   setInterval(refresh,60000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)refresh()});
 }
-function refresh(){Object.keys(subs).forEach(function(p){loadAll(p).catch(function(){})})}
+function refresh(){if(OFF&&!navigator.onLine)return;Object.keys(subs).forEach(function(p){loadAll(p).catch(function(){})})}
 
 function docRef(path){
   return {id:idOf(path),path:path,
-    get:function(){return q(sb.from('docs').select('data').eq('path',path).maybeSingle()).then(function(r){return {id:idOf(path),exists:!!r,data:function(){return r?r.data:undefined}}})},
-    set:function(data){return q(sb.from('docs').upsert({path:path,parent:parentOf(path),data:data}).select('data').single()).then(function(r){local(path,r.data)})},
-    update:function(patch){return q(sb.rpc('fusion',{p:path,patch:patch})).then(function(){return docRef(path).get()}).then(function(s){if(s.exists)local(path,s.data())})},
-    delete:function(){return q(sb.from('docs').delete().eq('path',path)).then(function(){local(path,null)})},
+    get:function(){
+      function snap(r){return {id:idOf(path),exists:!!r,data:function(){return r||undefined}}}
+      function loc(){
+        var c=cache[parentOf(path)];
+        if(c&&path in c)return Promise.resolve(snap(c[path]));
+        return idbGet(UID+'#'+path).then(function(r){var x=r||null;outbox.forEach(function(o){if(o.path!==path)return;if(o.op==='set')x=o.data;else if(o.op==='update')x=Object.assign({},x||{},o.patch);else x=null});return snap(x)});
+      }
+      if(OFF&&!navigator.onLine||outbox.some(function(o){return o.path===path}))return loc();
+      return q(sb.from('docs').select('data').eq('path',path).maybeSingle()).then(function(r){if(UID)idbSet(UID+'#'+path,r?r.data:null);return snap(r?r.data:null)},function(e){if(!net(e))throw e;setOff(true);return loc()})},
+    set:function(data){var c=cache[parentOf(path)];return ecrire({op:'set',path:path,data:data,creer:!(c&&path in c)},function(){return q(sb.from('docs').upsert({path:path,parent:parentOf(path),data:data}).select('data').single()).then(function(r){local(path,r.data)})})},
+    update:function(patch){return ecrire({op:'update',path:path,patch:patch},function(){return q(sb.rpc('fusion',{p:path,patch:patch})).then(function(){return docRef(path).get()}).then(function(s){if(s.exists)local(path,s.data())})})},
+    delete:function(){return ecrire({op:'delete',path:path},function(){return q(sb.from('docs').delete().eq('path',path)).then(function(){local(path,null)})})},
     onSnapshot:function(cb,fail){var p=parentOf(path);return colRef(p).onSnapshot(function(s){var d=s.docs.filter(function(x){return x.id===idOf(path)})[0];cb(d||{id:idOf(path),exists:false,data:function(){}})},fail)}
   };
 }
@@ -96,7 +184,7 @@ function importer(docs,onProgress){
   }
   return next();
 }
-function deconnexion(){sb.auth.signOut().then(function(){location.reload()},function(){location.reload()})}
+function deconnexion(){if(outbox.length&&!window.confirm(outbox.length+' enregistrement(s) ne sont pas encore envoyés. Si tu te déconnectes maintenant, ils restent sur cet appareil et partiront à la prochaine connexion de ce compte. Continuer ?'))return;sb.auth.signOut().then(function(){location.reload()},function(){location.reload()})}
 window.CB_WEB={importer:importer,creerCompte:creerCompte,changerMdp:changerMdp,deconnexion:deconnexion,sb:sb};
 
 /* ---------- Écran de connexion ---------- */
@@ -153,8 +241,16 @@ function showWait(){
 function profilDe(uid){return retry(function(){return tmo(q(sb.from('profils').select('role,code,nom').eq('user_id',uid).maybeSingle()),15000)},2)}
 function start(){
   showWait();
+  var last=lsGet('cb-last',null);
+  function horsLigne(){
+    if(!last)return false;
+    session={user:{id:last.uid}};profil=last.profil;UID=last.uid;if(last.off!=null)window.CB_OFF=last.off;
+    outbox=lsGet(boxKey(),[]);conflits=lsGet('cb-conflits-'+UID,[]);setOff(true);ouvrir();return true;
+  }
+  if(!navigator.onLine&&horsLigne())return Promise.resolve();
   return tmo(sb.auth.getSession(),15000).then(function(r){
-    session=r.data.session; if(!session){showLogin('login');return}
+    session=r.data.session;
+    if(!session){if(last&&(!navigator.onLine||r.error&&net(r.error))&&horsLigne())return;showLogin('login');return}
     var uid=session.user.id;
     return Promise.all([profilDe(uid),tmo(q(sb.rpc('heure_serveur')),10000).catch(function(){return null})]).then(function(x){
       if(x[1]){window.CB_OFF=new Date(x[1]).getTime()-Date.now()}
@@ -164,12 +260,13 @@ function start(){
       return retry(function(){return tmo(q(sb.rpc('devenir_admin')),15000)},2).then(function(ok){return ok?profilDe(uid):null});
     }).then(function(p){
       profil=p;
+      if(profil){UID=uid;outbox=lsGet(boxKey(),[]);conflits=lsGet('cb-conflits-'+UID,[]);lsSet('cb-last',{uid:uid,profil:profil,off:window.CB_OFF||0});setTimeout(flush,1500)}
       if(!profil){return sb.auth.signOut().then(function(){session=null;showLogin('login','Ce compte n\'a pas d\'accès. Demande à l\'administrateur.')})}
       var pre=lienId();
       if(pre&&String(profil.code||'').toUpperCase()!==pre)return autreCompte(pre);
       ouvrir();
     });
-  }).catch(function(e){showLogin('login',nice(e,'login'))});
+  }).catch(function(e){if(net(e)&&last&&(!session||session.user.id===last.uid)&&horsLigne())return;showLogin('login',nice(e,'login'))});
 }
 /* Lien d'un employé (?id=CODE) ouvert alors qu'un autre compte est connecté sur ce navigateur */
 function lienId(){var v=null;try{v=new URLSearchParams(location.search).get('id')}catch(e){}return v?String(v).toUpperCase().replace(/[^A-Z0-9]/g,''):null}
@@ -186,6 +283,7 @@ function autreCompte(code){
 }
 function ouvrir(){
   if(box){box.remove();box=null}
+  badge();
   var out=document.createElement('button');out.type='button';out.className='cb-out';out.textContent='Se déconnecter';out.onclick=deconnexion;document.body.appendChild(out);
   resolveReady();
 }
@@ -197,7 +295,10 @@ css.textContent='.cb-login{position:fixed;inset:0;z-index:50;display:flex;align-
 '.cb-card label{display:grid;gap:4px;font-size:.85rem;font-weight:600;color:var(--title,#0b4f86)}.cb-card input{font-size:16px;padding:11px 12px;border:1px solid var(--line,#cbd5e1);border-radius:10px;background:var(--card,#fff);color:inherit}'+
 '.cb-btn{padding:12px;border:0;border-radius:10px;background:#0284c7;color:#fff;font-weight:700;font-size:1rem;cursor:pointer}.cb-msg{min-height:1.2em;color:#dc2626;font-size:.85rem}'+
 '.cb-link{font-size:.8rem;color:var(--muted,#64748b);text-align:center}'+
+'.cb-net{position:fixed;left:12px;bottom:12px;z-index:41;max-width:min(560px,calc(100vw - 140px));font-size:.78rem;font-weight:600;padding:7px 12px;border-radius:12px;box-shadow:0 4px 14px rgba(2,60,110,.15)}.cb-net.off{background:#fff7d6;color:#7a5200;border:1px solid #f5c400}.cb-net.ok{background:#e7f8ee;color:#067647;border:1px solid #9be0b4}.cb-net.ko{background:#fdecec;color:#b42318;border:1px solid #f4a3a3}'+
 '.cb-out{position:fixed;right:12px;bottom:12px;z-index:40;font-size:.75rem;padding:6px 10px;border-radius:999px;border:1px solid var(--line,#cbd5e1);background:var(--card,#fff);color:var(--muted,#475569);cursor:pointer}';
 document.head.appendChild(css);
+/* Le site lui-même reste disponible sans Internet (copie gardée par le navigateur) */
+if('serviceWorker' in navigator&&location.protocol==='https:'){try{navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}}
 if(document.body)start();else document.addEventListener('DOMContentLoaded',start);
 })();
