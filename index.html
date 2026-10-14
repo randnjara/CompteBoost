@@ -262,7 +262,7 @@ tr.rowko td{background:color-mix(in srgb,#dc2626 9%,transparent)}
 
 <div id="app" class="app"><div id="cbBoot" style="padding:48px 16px;text-align:center;color:#0b4f86;font:16px system-ui,sans-serif">Chargement de Compte Boost…</div></div>
 <script>setTimeout(function(){var b=document.getElementById("cbBoot");if(b&&!window.CB_WEB)b.innerHTML="Le site n\u2019arrive pas à se charger sur cet appareil.<br><br>1. Vérifie la connexion Internet.<br>2. Mets à jour Google Chrome (Play Store ou App Store).<br>3. Recharge la page."},20000)</script>
-<script src="config.js?v=40"></script><script src="supabase.js?v=40"></script><script src="web.js?v=40"></script>
+<script src="config.js?v=41"></script><script src="supabase.js?v=41"></script><script src="web.js?v=41"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
@@ -1763,6 +1763,8 @@ function sauvegardeHtml(){
     '<div><b>2. Restaurer une sauvegarde</b><p class="muted" style="font-size:.8rem;margin:4px 0 8px;white-space:normal;max-width:100%">Remet ce qui manque à partir d\'un fichier de sauvegarde. Les données déjà présentes ne sont jamais remplacées ni supprimées.</p><input type="file" id="webRestore" accept=".json,application/json"><div class="msg" id="webRestMsg" role="status">'+esc(S.msgs.rest||'')+'</div></div>'+
     '<div><b>3. Importer les données depuis Excel</b><p class="muted" style="font-size:.8rem;margin:4px 0 8px;white-space:normal;max-width:100%">Fichier Excel COMPTE BOOST (une feuille par page : ligne DATE, lignes des boosts, TOTAL, puis messages réels). Seuls les jours <b>qui n\'existent pas encore</b> dans le logiciel sont ajoutés : rien n\'est remplacé. Tu vois la liste avant de confirmer.</p><input type="file" id="xlFile" accept=".xlsx,.xls,.ods">'+
       '<div class="msg" id="xlMsg" role="status">'+esc(S.msgs.xl||'')+'</div>'+(X?xlPreview(X):'')+'</div>'+
+    '<div><b>4. Exporter vers Excel</b><p class="muted" style="font-size:.8rem;margin:4px 0 8px;white-space:normal;max-width:100%">Fichier Excel avec une feuille « Récapitulatif » (page, date, messages boost, messages réels, écart) et une feuille par page au format COMPTE BOOST (compteurs de chaque boost, différence, TOTAL, messages réels). Ce fichier peut être réimporté.</p>'+
+      '<button type="button" class="primary" id="xlOut">'+ico('dl','ic" style="color:#fff')+' Exporter vers Excel</button><div class="msg" id="xlOutMsg" role="status">'+esc(S.msgs.xlo||'')+'</div></div>'+
     '</div></section>';
 }
 function bkSave(name,text){
@@ -1865,6 +1867,41 @@ document.addEventListener('change',function(ev){
   rd.readAsArrayBuffer(f);
 });
 document.addEventListener('change',function(ev){var i=ev.target.dataset&&ev.target.dataset.xlrow;if(i==null||!S.xl)return;S.xl.rows[+i].on=ev.target.checked;render()});
+
+/* --- Export Excel : feuille récapitulative + une feuille par page au format COMPTE BOOST (réimportable) --- */
+function bNum(b,i){var m=String(b.nom||'').match(/(\d+)/);return m?+m[1]:i+1}
+function xlExport(){
+  function say(t){S.msgs.xlo=t;var m=$('xlOutMsg');if(m)m.textContent=t}
+  if(!window.XLSX){say('Excel indisponible : recharge la page puis réessaie.');return}
+  var dm=dayMap(), t=today(), wb=XLSX.utils.book_new(), rec=[['Page','Employé','Date','Jour','Heure','Boosts remplis','Messages boost','Messages réels','Écart (réels − boost)','Statut']];
+  var used={};
+  pageIds().forEach(function(pid){
+    var days=Object.keys(dm[pid]||{}).filter(function(d){return d<=t}).sort();if(!days.length)return;
+    var nums={}, order=[];
+    days.forEach(function(d){(dm[pid][d].counters||[]).forEach(function(b,i){if(b.messages==null)return;var k=bNum(b,i);if(!nums[b.id]){nums[b.id]=k;order.push(b.id)}})});
+    order.sort(function(a,b){return nums[a]-nums[b]});
+    var head=['HEURE'], date=['DATE'], rows={}, tot=['TOTAL'], re=['MESSAGES RÉELS'];
+    order.forEach(function(id){rows[id]={c:[nums[id]],n:[null]}});
+    days.forEach(function(d){
+      var c=dm[pid][d], cm={};(c.counters||[]).forEach(function(b){cm[b.id]=b.messages});
+      head.push(c.heure||'');date.push(parse(d));
+      order.forEach(function(id){rows[id].c.push(cm[id]==null?null:+cm[id]);rows[id].n.push(id in c.nv&&cm[id]!=null?c.nv[id]:null)});
+      tot.push(c.totaux.messagesBoosts);re.push(c.totaux.reels);
+      var nb=(c.counters||[]).filter(function(b){return b.messages!=null}).length;
+      rec.push([S.pages[pid].nom,memberName(respAt(pid,d))||'',parse(d),JOURS[parse(d).getDay()],c.heure||'',nb,c.totaux.messagesBoosts,c.totaux.reels,c.totaux.ecart,(DSTAT[dayStatus(pid,d,dm)]||[''])[0]]);
+    });
+    var aoa=[head,date];order.forEach(function(id){aoa.push(rows[id].c);aoa.push(rows[id].n)});aoa.push(tot);aoa.push(re);
+    var ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true,dateNF:'dd/mm/yyyy'});ws['!cols']=[{wch:16}];
+    var nm=S.pages[pid].nom.replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,31), n=nm, k=2;while(used[n.toUpperCase()]){n=nm.slice(0,28)+' '+k++}used[n.toUpperCase()]=1;
+    XLSX.utils.book_append_sheet(wb,ws,n);
+  });
+  var r=XLSX.utils.aoa_to_sheet(rec,{cellDates:true,dateNF:'dd/mm/yyyy'});r['!cols']=[{wch:18},{wch:14},{wch:11},{wch:10},{wch:7},{wch:8},{wch:10},{wch:10},{wch:12},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,r,'Récapitulatif');
+  wb.SheetNames.unshift(wb.SheetNames.pop());
+  var name='compte-boost-'+t+'.xlsx';
+  try{XLSX.writeFile(wb,name,{cellDates:true});say('✓ Fichier Excel téléchargé : '+name+' ('+(rec.length-1)+' jours, '+(wb.SheetNames.length-1)+' pages).')}catch(e){say('Export impossible : '+(e&&e.message||'erreur')+'.')}
+}
+document.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('#xlOut');if(b)xlExport()});
 
 /* ---------- Paramètres ---------- */
 function viewParams(){
